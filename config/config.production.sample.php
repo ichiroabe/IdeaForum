@@ -16,11 +16,12 @@ return [
     'debug'     => false,          // 本番では必ず false のまま
 
     // ロリポップ ユーザー専用ページ → データベース の値
+    // IdeaForum専用に作成したDB (MySQL 8.4)。WordPressのDBとは別サーバーなので注意。
     'db' => [
-        'host'     => 'mysql80-2.lolipop.lan',
-        'name'     => 'LAA1700269-irxlcy',
+        'host'     => 'mysql84-1.lolipop.lan',
+        'name'     => 'LAA1700269-ideaforum',
         'user'     => 'LAA1700269',
-        'password' => '★DBのパスワードをここに★',
+        'password' => '★このDBのパスワードをここに★',
     ],
 
     'mail' => [
