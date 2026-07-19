@@ -153,6 +153,61 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 .report-box input[type="text"] { margin: 0; flex: 1; }
 .report-box.small { display: inline-block; margin: 0; }
 
+/* --- 付箋ボード --- */
+.board-section { margin-top: 28px; }
+.board-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.board-head h2 { font-size: 1.1rem; margin: 0; }
+.board-status { font-size: 0.85rem; color: var(--muted); }
+.board-status.is-error { color: var(--danger); }
+
+.board {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  margin-top: 8px;
+}
+.board-scroll { overflow: auto; max-height: 560px; border-radius: var(--radius); }
+.board-canvas {
+  position: relative; min-width: 900px; min-height: 500px;
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.board-lines { position: absolute; inset: 0; pointer-events: none; }
+.board-lines .board-line { stroke: #94a3b8; stroke-width: 2; pointer-events: stroke; }
+.board-lines .board-line:hover { stroke: var(--danger); stroke-width: 3; }
+.board-lines .board-line-label { font-size: 11px; fill: var(--muted); }
+
+.sticky {
+  position: absolute; width: 180px; min-height: 110px;
+  border-radius: 4px; padding: 8px 10px 22px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  font-size: 0.88rem; line-height: 1.5;
+  display: flex; flex-direction: column;
+  overflow: hidden; word-break: break-word;
+}
+.can-edit .sticky { cursor: grab; }
+.sticky.is-dragging { cursor: grabbing; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28); z-index: 10; }
+.sticky.is-link-source { outline: 3px solid var(--primary); outline-offset: 1px; }
+.sticky-body { flex: 1; white-space: pre-wrap; }
+.sticky-meta {
+  position: absolute; left: 10px; bottom: 4px;
+  font-size: 0.7rem; color: rgba(0, 0, 0, 0.45);
+}
+.sticky-tools {
+  position: absolute; top: 2px; right: 2px;
+  display: none; gap: 1px;
+}
+.sticky:hover .sticky-tools { display: flex; }
+.sticky-tools button {
+  border: none; background: rgba(255, 255, 255, 0.75); cursor: pointer;
+  font-size: 0.7rem; padding: 1px 4px; border-radius: 3px; line-height: 1.4;
+}
+.sticky-tools button:hover { background: #fff; }
+
+.sticky-yellow { background: #fef9c3; }
+.sticky-blue   { background: #dbeafe; }
+.sticky-green  { background: #dcfce7; }
+.sticky-pink   { background: #fce7f3; }
+.sticky-gray   { background: #e5e7eb; }
+
 .posts { margin-top: 28px; }
 .posts h2 { font-size: 1.1rem; }
 .post {

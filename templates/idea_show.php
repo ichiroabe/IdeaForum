@@ -51,6 +51,31 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   <?php endif; ?>
 </article>
 
+<section class="board-section">
+  <div class="board-head">
+    <h2>付箋ボード</h2>
+    <?php if ($canPost): ?>
+      <button type="button" class="btn btn-primary board-add">+ 付箋を追加</button>
+    <?php endif; ?>
+    <span class="board-status"></span>
+  </div>
+  <?php if (!$canPost): ?>
+    <p class="note">付箋の追加・編集には <a href="<?= bp() ?>/login">ログイン</a> が必要です。</p>
+  <?php else: ?>
+    <p class="note">付箋はドラッグで移動できます。「連」を押してから別の付箋をクリックすると線でつながります。線をクリックすると削除できます。</p>
+  <?php endif; ?>
+  <div id="board" class="board"
+       data-idea-id="<?= (int)$idea['id'] ?>"
+       data-base="<?= e(bp()) ?>"
+       data-csrf="<?= e(Csrf::token()) ?>">
+    <div class="board-scroll">
+      <div class="board-canvas">
+        <svg class="board-lines" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="posts">
   <h2>返信 (<?= count($posts) ?>)</h2>
   <?php foreach ($posts as $p): ?>
@@ -65,6 +90,9 @@ $currentPath = '/ideas/' . (int)$idea['id'];
         <?php if ($p['status'] === 'hidden'): ?><span class="badge badge-danger">非表示</span><?php endif; ?>
         <span class="post-actions">
           <?php if ($canPost): ?>
+          <button type="button" class="link-btn" data-note-from-post="<?= (int)$p['id'] ?>"
+                  data-note-body="<?= e(mb_substr($p['body'], 0, 500)) ?>"
+                  title="この返信を付箋にしてボードへ追加">付箋にする</button>
           <details class="report-box small">
             <summary>通報</summary>
             <form method="post" action="<?= bp() ?>/report">
@@ -110,3 +138,5 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   <p class="note">このスレッドは閉じられています。</p>
   <?php endif; ?>
 </section>
+
+<script src="<?= bp() ?>/assets/board.js" defer></script>

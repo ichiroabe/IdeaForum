@@ -225,10 +225,53 @@ final class IdeaController
             $md .= $p['body'] . "\n";
         }
 
+        $md .= self::boardMarkdown((int)$idea['id']);
+
         $response->getBody()->write($md);
         return $response
             ->withHeader('Content-Type', 'text/markdown; charset=utf-8')
             ->withHeader('Content-Disposition', 'attachment; filename="idea-' . $idea['id'] . '.md"');
+    }
+
+    /**
+     * 付箋ボードを mermaid の図として書き出す。
+     * openManidoc 側でノードの関係をそのまま図として取り込めるようにするため。
+     */
+    private static function boardMarkdown(int $ideaId): string
+    {
+        $notes = Db::query(
+            'SELECT id, body, color FROM notes WHERE idea_id = ? ORDER BY id',
+            [$ideaId]
+        )->fetchAll();
+        if (!$notes) {
+            return '';
+        }
+        $links = Db::query(
+            'SELECT from_note_id, to_note_id, label FROM note_links WHERE idea_id = ? ORDER BY id',
+            [$ideaId]
+        )->fetchAll();
+
+        $md = "\n## 付箋ボード\n\n```mermaid\ngraph TD\n";
+        foreach ($notes as $n) {
+            $md .= sprintf("    N%d[\"%s\"]\n", $n['id'], self::mermaidText($n['body']));
+        }
+        foreach ($links as $l) {
+            $label = trim((string)($l['label'] ?? ''));
+            $md .= $label !== ''
+                ? sprintf("    N%d -->|%s| N%d\n", $l['from_note_id'], self::mermaidText($label), $l['to_note_id'])
+                : sprintf("    N%d --> N%d\n", $l['from_note_id'], $l['to_note_id']);
+        }
+        $md .= "```\n";
+        return $md;
+    }
+
+    // mermaidのラベルを壊す文字を避ける(引用符・角括弧・改行・パイプ)
+    private static function mermaidText(string $s): string
+    {
+        $s = str_replace(["\r\n", "\n", "\r"], ' ', $s);
+        $s = str_replace(['"', '[', ']', '{', '}', '|', '<', '>'], ' ', $s);
+        $s = trim(preg_replace('/\s+/u', ' ', $s) ?? '');
+        return mb_strlen($s) > 60 ? mb_substr($s, 0, 60) . '…' : $s;
     }
 
     private static function findVisible(int $id, Request $request): array
