@@ -7,3 +7,6 @@
 # phpMyAdminで実行したら、そのファイル名をここに追記すること。
 
 schema.sql
+002-notes.sql
+003-note-history.sql
+004-avatars.sql
