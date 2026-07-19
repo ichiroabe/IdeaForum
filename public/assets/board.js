@@ -104,7 +104,11 @@
     const tools = document.createElement('div');
     tools.className = 'sticky-tools';
     if (n.events > 0) {
-      tools.appendChild(toolButton('履', 'この付箋の履歴を見る', e => { e.stopPropagation(); showHistory(n); }));
+      // 件数を出して「押せば履歴が開く」と分かるようにする
+      const h = toolButton('履' + n.events, 'この付箋の履歴を見る (' + n.events + '件)',
+        e => { e.stopPropagation(); showHistory(n); });
+      h.classList.add('has-history');
+      tools.appendChild(h);
     }
     if (canEdit && !n.deleted) {
       tools.appendChild(toolButton('連', 'ここから線をつなぐ', e => { e.stopPropagation(); startLink(n.id); }));
