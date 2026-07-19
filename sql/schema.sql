@@ -98,3 +98,6 @@ CREATE TABLE IF NOT EXISTS reports (
     KEY ix_reports_open (resolved_at, created_at),
     CONSTRAINT fk_reports_user FOREIGN KEY (reporter_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ここまでがテーブル定義。管理者の指定は sql/make-admin.sql を参照。
+-- (会員登録より前に UPDATE しても対象0件で何も起きないため、別ファイルに分けている)
