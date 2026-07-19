@@ -5,6 +5,7 @@ use App\Controller\AdminController;
 use App\Controller\AuthController;
 use App\Controller\IdeaController;
 use App\Controller\NoteController;
+use App\Controller\SettingsController;
 use App\Support\Auth;
 use App\Support\Csrf;
 use App\Support\Flash;
@@ -114,6 +115,10 @@ return function (App $app): void {
     $app->post('/ideas', [IdeaController::class, 'create'])->add($requireActive);
     $app->post('/ideas/{id:[0-9]+}/reply', [IdeaController::class, 'reply'])->add($requireActive);
     $app->post('/report', [IdeaController::class, 'report'])->add($requireActive);
+
+    // 表示の設定 (アバター・表示名)
+    $app->get('/settings', [SettingsController::class, 'show'])->add($requireActive);
+    $app->post('/settings', [SettingsController::class, 'save'])->add($requireActive);
 
     // 管理
     $app->get('/admin', [AdminController::class, 'dashboard'])->add($requireAdmin);

@@ -1,4 +1,7 @@
-<?php /** @var array $ideas, $tagsByIdea, $allTags */ ?>
+<?php
+use App\Support\Avatar;
+/** @var array $ideas, $tagsByIdea, $allTags */
+?>
 <div class="page-head">
   <h1>アイディア一覧</h1>
   <form method="get" action="<?= bp() ?>/" class="search-form">
@@ -28,7 +31,10 @@
     <div class="idea-main">
       <a class="idea-title" href="<?= bp() ?>/ideas/<?= (int)$i['id'] ?>"><?= e($i['title']) ?></a>
       <div class="idea-meta">
-        <span><?= e($i['display_name']) ?></span>
+        <span class="avatar-with-name">
+          <?= Avatar::html(['id' => $i['user_id'], 'display_name' => $i['display_name'],
+                'avatar_emoji' => $i['avatar_emoji'], 'avatar_color' => $i['avatar_color']], 'sm') ?><?= e($i['display_name']) ?>
+        </span>
         <span><?= e(fmt_date($i['updated_at'])) ?></span>
         <?php if ($i['status'] === 'closed'): ?><span class="badge">終了</span><?php endif; ?>
         <?php if ($i['status'] === 'hidden'): ?><span class="badge badge-danger">非表示</span><?php endif; ?>

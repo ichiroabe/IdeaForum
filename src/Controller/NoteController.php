@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Support\Auth;
+use App\Support\Avatar;
 use App\Support\Db;
 use App\Support\RateLimiter;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -39,7 +40,7 @@ final class NoteController
 
         $notes = Db::query(
             "SELECT n.id, n.body, n.pos_x, n.pos_y, n.color, n.source_post_id,
-                    n.user_id, n.deleted_at, u.display_name,
+                    n.user_id, n.deleted_at, u.display_name, u.avatar_emoji, u.avatar_color,
                     (SELECT COUNT(*) FROM note_events e WHERE e.note_id = n.id) AS event_count
              FROM notes n JOIN users u ON u.id = n.user_id
              WHERE n.idea_id = ?" . ($showDeleted ? '' : ' AND n.deleted_at IS NULL') . '
@@ -152,7 +153,7 @@ final class NoteController
 
         $note = Db::query(
             "SELECT n.id, n.body, n.pos_x, n.pos_y, n.color, n.source_post_id, n.user_id, n.deleted_at,
-                    u.display_name, 1 AS event_count
+                    u.display_name, u.avatar_emoji, u.avatar_color, 1 AS event_count
              FROM notes n JOIN users u ON u.id = n.user_id WHERE n.id = ?",
             [$id]
         )->fetch();
@@ -386,6 +387,11 @@ final class NoteController
             'color'   => $n['color'],
             'author'  => $n['display_name'],
             'userId'  => (int)$n['user_id'],
+            // 付箋に作成者のアバターを出すため、色と絵柄も一緒に返す
+            'avatar'  => [
+                'label' => Avatar::labelFor($n),
+                'color' => Avatar::colorFor(['id' => $n['user_id']] + $n),
+            ],
             'postId'  => $n['source_post_id'] !== null ? (int)$n['source_post_id'] : null,
             'deleted' => $n['deleted_at'] !== null,
             'events'  => (int)($n['event_count'] ?? 0),

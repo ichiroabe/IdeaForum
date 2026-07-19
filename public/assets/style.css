@@ -153,6 +153,43 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 .report-box input[type="text"] { margin: 0; flex: 1; }
 .report-box.small { display: inline-block; margin: 0; }
 
+/* --- アバター (画像は使わず絵文字と背景色で表す) --- */
+.avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; color: #fff; flex-shrink: 0;
+  line-height: 1; user-select: none;
+}
+.avatar-xs { width: 16px; height: 16px; font-size: 9px; }
+.avatar-sm { width: 22px; height: 22px; font-size: 12px; }
+.avatar-md { width: 28px; height: 28px; font-size: 15px; }
+.avatar-lg { width: 56px; height: 56px; font-size: 30px; }
+.avatar-with-name { display: inline-flex; align-items: center; gap: 6px; }
+
+.settings-preview {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 20px;
+}
+.settings-preview-label { font-size: 0.82rem; color: var(--muted); }
+
+.picker { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 18px; }
+.picker legend { font-size: 0.9rem; color: var(--muted); padding: 0 4px; }
+.picker .note { margin: 0 0 8px; }
+.picker-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.picker-item { margin: 0; cursor: pointer; }
+.picker-item input { position: absolute; opacity: 0; width: 0; height: 0; }
+.picker-item > span {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 38px; height: 38px; font-size: 20px;
+  border: 2px solid transparent; border-radius: var(--radius);
+  background: var(--surface);
+}
+.picker-item:hover > span { background: var(--bg); }
+.picker-item input:checked + span { border-color: var(--primary); background: #eff6ff; }
+.picker-item input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+.picker-none > span { font-size: 0.78rem; color: var(--muted); padding: 0 8px; }
+.picker-color { display: block; width: 26px; height: 26px; border-radius: 50%; }
+
 /* --- 折りたたみ --- */
 .fold { margin-top: 28px; }
 .fold-summary {

@@ -42,7 +42,7 @@ final class IdeaController
 
         $total = (int)Db::query("SELECT COUNT(*) FROM ideas i WHERE {$whereSql}", $params)->fetchColumn();
         $ideas = Db::query(
-            "SELECT i.*, u.display_name
+            "SELECT i.*, u.display_name, u.avatar_emoji, u.avatar_color
              FROM ideas i JOIN users u ON u.id = i.user_id
              WHERE {$whereSql}
              ORDER BY i.updated_at DESC
@@ -115,11 +115,17 @@ final class IdeaController
     public function show(Request $request, Response $response, array $args): Response
     {
         $idea = self::findVisible((int)$args['id'], $request);
-        $idea['author_name'] = (string)Db::query(
-            'SELECT display_name FROM users WHERE id = ?', [$idea['user_id']]
-        )->fetchColumn();
+        $author = Db::query(
+            'SELECT display_name, avatar_emoji, avatar_color FROM users WHERE id = ?',
+            [$idea['user_id']]
+        )->fetch() ?: [];
+        $idea['author_name']  = (string)($author['display_name'] ?? '');
+        $idea['author_emoji'] = $author['avatar_emoji'] ?? null;
+        $idea['author_color'] = $author['avatar_color'] ?? null;
+
         $posts = Db::query(
-            "SELECT p.*, u.display_name FROM posts p JOIN users u ON u.id = p.user_id
+            "SELECT p.*, u.display_name, u.avatar_emoji, u.avatar_color
+             FROM posts p JOIN users u ON u.id = p.user_id
              WHERE p.idea_id = ? ORDER BY p.created_at",
             [$idea['id']]
         )->fetchAll();

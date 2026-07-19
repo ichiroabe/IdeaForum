@@ -1,5 +1,6 @@
 <?php
 use App\Support\Auth;
+use App\Support\Avatar;
 use App\Support\Csrf;
 use App\Support\Text;
 
@@ -24,7 +25,14 @@ $currentPath = '/ideas/' . (int)$idea['id'];
     </div>
   </div>
   <div class="idea-meta">
-    <span><?= e($idea['author_name'] ?? '') ?></span>
+    <span class="avatar-with-name">
+      <?= Avatar::html([
+            'id' => $idea['user_id'],
+            'display_name' => $idea['author_name'] ?? '',
+            'avatar_emoji' => $idea['author_emoji'] ?? null,
+            'avatar_color' => $idea['author_color'] ?? null,
+          ], 'md') ?><?= e($idea['author_name'] ?? '') ?>
+    </span>
     <span><?= e(fmt_date($idea['created_at'])) ?></span>
     <?php if ($idea['status'] === 'closed'): ?><span class="badge">終了</span><?php endif; ?>
     <?php if ($idea['status'] === 'hidden'): ?><span class="badge badge-danger">非表示</span><?php endif; ?>
@@ -96,6 +104,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
     <?php endif; ?>
     <div class="post <?= $p['status'] === 'hidden' ? 'is-hidden' : '' ?>" id="post-<?= (int)$p['id'] ?>">
       <div class="post-meta">
+        <?= Avatar::html($p, 'md') ?>
         <strong><?= e($p['display_name']) ?></strong>
         <span><?= e(fmt_date($p['created_at'])) ?></span>
         <?php if ($p['status'] === 'hidden'): ?><span class="badge badge-danger">非表示</span><?php endif; ?>

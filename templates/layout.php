@@ -1,6 +1,7 @@
 <?php
 use App\Support\App;
 use App\Support\Auth;
+use App\Support\Avatar;
 use App\Support\Csrf;
 use App\Support\Flash;
 
@@ -26,7 +27,9 @@ $siteName = (string)App::config('site_name', 'IdeaForum');
       <?php endif; ?>
       <?php if ($user): ?>
         <?php if ($user['role'] === 'admin'): ?><a href="<?= bp() ?>/admin">管理</a><?php endif; ?>
-        <span class="username"><?= e($user['display_name']) ?></span>
+        <a class="username" href="<?= bp() ?>/settings" title="表示の設定">
+          <?= Avatar::html($user, 'sm') ?><?= e($user['display_name']) ?>
+        </a>
         <form method="post" action="<?= bp() ?>/logout" class="inline-form">
           <?= Csrf::field() ?>
           <button type="submit" class="link-btn">ログアウト</button>

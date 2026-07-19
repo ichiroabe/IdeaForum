@@ -98,7 +98,16 @@
 
     const meta = document.createElement('div');
     meta.className = 'sticky-meta';
-    meta.textContent = n.author + (n.postId ? ' (返信より)' : '') + (n.deleted ? ' [削除済]' : '');
+    if (n.avatar) {
+      const av = document.createElement('span');
+      av.className = 'avatar avatar-xs';
+      av.style.background = n.avatar.color;
+      av.textContent = n.avatar.label;
+      meta.appendChild(av);
+    }
+    meta.appendChild(document.createTextNode(
+      n.author + (n.postId ? ' (返信より)' : '') + (n.deleted ? ' [削除済]' : '')
+    ));
     el.appendChild(meta);
 
     const tools = document.createElement('div');
