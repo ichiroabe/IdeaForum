@@ -11,9 +11,9 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   <div class="idea-detail-head">
     <h1><?= e($idea['title']) ?></h1>
     <div class="idea-actions">
-      <a class="btn" href="/ideas/<?= (int)$idea['id'] ?>/export.md" title="openManidocに取り込めるMarkdownをダウンロード">MD出力</a>
+      <a class="btn" href="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/export.md" title="openManidocに取り込めるMarkdownをダウンロード">MD出力</a>
       <?php if (Auth::isAdmin()): ?>
-      <form method="post" action="/admin/toggle-visibility" class="inline-form">
+      <form method="post" action="<?= bp() ?>/admin/toggle-visibility" class="inline-form">
         <?= Csrf::field() ?>
         <input type="hidden" name="target_type" value="idea">
         <input type="hidden" name="target_id" value="<?= (int)$idea['id'] ?>">
@@ -32,7 +32,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   <?php if ($tags): ?>
   <div class="idea-tags">
     <?php foreach ($tags as $tn): ?>
-      <a class="tag-chip small" href="/?tag=<?= urlencode($tn) ?>"><?= e($tn) ?></a>
+      <a class="tag-chip small" href="<?= bp() ?>/?tag=<?= urlencode($tn) ?>"><?= e($tn) ?></a>
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
@@ -40,7 +40,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   <?php if ($canPost): ?>
   <details class="report-box">
     <summary>このアイディアを通報</summary>
-    <form method="post" action="/report">
+    <form method="post" action="<?= bp() ?>/report">
       <?= Csrf::field() ?>
       <input type="hidden" name="target_type" value="idea">
       <input type="hidden" name="target_id" value="<?= (int)$idea['id'] ?>">
@@ -67,7 +67,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
           <?php if ($canPost): ?>
           <details class="report-box small">
             <summary>通報</summary>
-            <form method="post" action="/report">
+            <form method="post" action="<?= bp() ?>/report">
               <?= Csrf::field() ?>
               <input type="hidden" name="target_type" value="post">
               <input type="hidden" name="target_id" value="<?= (int)$p['id'] ?>">
@@ -78,7 +78,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
           </details>
           <?php endif; ?>
           <?php if (Auth::isAdmin()): ?>
-          <form method="post" action="/admin/toggle-visibility" class="inline-form">
+          <form method="post" action="<?= bp() ?>/admin/toggle-visibility" class="inline-form">
             <?= Csrf::field() ?>
             <input type="hidden" name="target_type" value="post">
             <input type="hidden" name="target_id" value="<?= (int)$p['id'] ?>">
@@ -95,7 +95,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   <?php if ($canPost && $idea['status'] === 'open'): ?>
   <div class="reply-form">
     <h3>返信する</h3>
-    <form method="post" action="/ideas/<?= (int)$idea['id'] ?>/reply">
+    <form method="post" action="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/reply">
       <?= Csrf::field() ?>
       <textarea name="body" rows="6" required maxlength="10000" placeholder="このアイディアへの意見・改善案・派生アイディアなど (Markdown可)"></textarea>
       <div class="hp-field" aria-hidden="true">
@@ -105,7 +105,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
     </form>
   </div>
   <?php elseif (!$user): ?>
-  <p class="note">返信するには <a href="/login">ログイン</a> してください。</p>
+  <p class="note">返信するには <a href="<?= bp() ?>/login">ログイン</a> してください。</p>
   <?php elseif ($idea['status'] === 'closed'): ?>
   <p class="note">このスレッドは閉じられています。</p>
   <?php endif; ?>

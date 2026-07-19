@@ -1,59 +1,115 @@
-# ロリポップ(ライトプラン)デプロイ手順
+# ロリポップへのデプロイ手順
 
-ライトプランはSSHが使えないため、**ローカルで composer install を済ませて vendor/ ごとFTPアップロード**する。
+対象アカウント: **ライトプラン** / ドメイン **fusion.upper.jp** / サーバー **lit-2**
 
-## 1. ロリポップ側の準備
+ライトプランはSSHが使えないため、ローカルで `composer install` を済ませ、
+`vendor/` ごとFTPSで転送する。
 
-1. ユーザー専用ページ → サーバーの管理・設定 → **PHP設定** で PHP 8.x (CGI版) を選択
-2. **データベース** → 作成。ホスト名 / DB名 / ユーザー名 / パスワードを控える
-3. phpMyAdmin にログインし、作成したDBに対して `sql/schema.sql` の内容を実行
+## なぜブラウザのロリポップ!FTPを使わないか
 
-## 2. 設定ファイル
+ロリポップ!FTP(ブラウザ版)には次の制限があり、本アプリの規模では使えない。
 
-`config/config.sample.php` を `config/config.php` にコピーして編集:
+- 一度に選択できるのは20ファイル、一度にアップロードできるのは50ファイル
+- フォルダの再帰アップロードができない(フォルダは1つずつ手作業で作成)
+- zipのサーバー側展開ができない
+- 画面上にも「アップロードするファイルが大量にある場合はFTPソフトをご利用ください」と案内がある
 
-- `base_url` — 公開URL (例: `https://forum.example.com`)
-- `debug` — **必ず false**
-- `db` — 手順1で控えた値
-- `mail.driver` — `'mail'` / `mail.from` — ロリポップで使えるメールアドレス
-- `turnstile` — Cloudflareダッシュボードで取得した site_key / secret_key
-  (空のままなら Turnstile 無効。ハニーポットとレート制限は常時有効)
+本アプリは vendor を含めて **約260ファイル / 65フォルダ**。
+そのため `deploy\lolipop-deploy.ps1` でFTPS転送する。
 
-## 3. アップロード構成
+## 設置場所について
 
-FTP(ロリポップFTPまたはFileZilla等)で以下をアップロードする:
+`fusion.upper.jp` のWeb公開フォルダ直下には既存のmanidocサイトが稼働している。
+IdeaForumはそれを避けて **`/ideaforum/` サブフォルダ** に設置し、
+`https://fusion.upper.jp/ideaforum/` で公開する。
+
+サブフォルダ設置に対応するため、設定の `base_path` にプレフィックスを指定する
+(アプリ内のリンク・リダイレクトはすべてこの値を先頭に付けて生成される)。
+
+## 1. データベース(作成済み)
+
+ユーザー専用ページ → データベース で確認できる値:
+
+| 項目 | 値 |
+|---|---|
+| データベース名 | `LAA1700269-irxlcy` |
+| ホスト | `mysql80-2.lolipop.lan` |
+| バージョン | MySQL 8.0 |
+| ユーザー名 | `LAA1700269` |
+| パスワード | ご自身で控えている値 |
+
+phpMyAdmin にログインし、このDBに対して `sql/schema.sql` の内容をそのまま実行する。
+
+## 2. 本番設定ファイルを作る
+
+```powershell
+copy config\config.production.sample.php config\config.production.php
+```
+
+`config.production.php` を開き、★印の2箇所(**DBパスワード**と**送信元メールアドレス**)を記入する。
+このファイルは `.gitignore` 済みなのでGitHubには上がらない。
+転送時にサーバー上の `config/config.php` として置かれる。
+
+## 3. 転送する
+
+FTPパスワードは環境変数から読ませる。スクリプトにもGitにも残らない。
+
+```powershell
+# パスワードを環境変数に入れる(この行はご自身で実行)
+$env:IDEAFORUM_FTP_PASS = 'FTPのパスワード'
+
+# 何が送られるかを確認(実際には送らない)
+.\deploy\lolipop-deploy.ps1 -WhatIf
+
+# 実行
+.\deploy\lolipop-deploy.ps1
+```
+
+接続先は既定で `ftp-1.lolipop.jp` / アカウント `upper.jp-fusion` / 設置先 `/ideaforum`。
+変更する場合は `-FtpHost` `-FtpUser` `-RemoteDir` で指定できる。
+
+転送されないもの(意図的に除外):
+
+- `config/config.php` … ローカル開発用。本番設定を壊すため
+- `sql/` `docs/` `deploy/` `.git/` `composer.*` `README.md`
+- `storage/mail/*.txt` … 開発中の確認メール(トークンを含むため)
+
+## 4. 公開フォルダの保護
+
+`src/` `config/` `templates/` `storage/` `sql/` にはアクセス拒否の `.htaccess` を同梱済み。
+`vendor/` にだけ手動で同じ内容のファイルを置くこと(ロリポップ!FTPの「新規ファイル作成」で可):
 
 ```
-ideaforum/            ← FTPルート直下に作るフォルダ
-├─ public/            ← ここを公開フォルダに設定
-├─ src/
-├─ templates/
-├─ config/            ← config.php を含める
-├─ vendor/            ← ローカルで composer install した結果
-└─ storage/
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
 ```
 
-- `sql/`、`composer.json` 等はアップロード不要(あっても害はない)
-- **ユーザー専用ページ → 独自ドメイン/サブドメイン設定で、公開(アップロード)フォルダを `ideaforum/public` に設定する。**
-  これで `src/` や `config/` にWebから直接アクセスできなくなる。
-- 公開フォルダを分けられない構成の場合に備えて、`config/` `src/` `templates/` `sql/` `storage/` には
-  アクセス拒否の `.htaccess` を同梱してある。`vendor/` にだけ手動で同じ内容の `.htaccess` を置くこと:
-  ```
-  Require all denied
-  ```
+## 5. 動作確認と管理者昇格
 
-## 4. 動作確認と初期設定
+1. `https://fusion.upper.jp/ideaforum/` を開き、トップページが表示されることを確認
+2. ご自身のメールアドレスで新規登録し、確認メールが届くことを確認
+3. メール内のリンクを開いて登録を完了する
+4. **登録が終わってから** phpMyAdmin で自分を管理者にする:
 
-1. 公開URLを開きトップページが表示されることを確認
-2. 自分のメールアドレスで新規登録し、確認メールが届くことを確認
-3. phpMyAdmin で自分を管理者に昇格:
    ```sql
-   UPDATE users SET role='admin' WHERE email='自分のメール';
+   UPDATE users SET role = 'admin' WHERE email = 'ここに登録したメールアドレス';
    ```
-4. 再ログインするとヘッダーに「管理」リンクが出る
 
-## 5. 運用メモ
+   この SQL は「登録済みのユーザー行」を書き換えるものなので、
+   手順3を終える前に実行しても対象が0件で何も起きない。
+   また `email` にはドメイン名ではなく、登録に使った**メールアドレス全体**を
+   シングルクォートで囲んで指定する。
+
+5. 再ログインするとヘッダーに「管理」リンクが出る
+
+## 6. 運用メモ
 
 - `rate_events` テーブルはアクセス時に確率的に自動掃除されるので cron 不要
-- 荒らし対応: 管理画面から投稿の非表示・ユーザー停止が可能
-- Turnstileのウィジェットが表示されない場合は site_key のドメイン設定を確認
+- 荒らし対応は管理画面から(投稿の非表示・ユーザー停止)
+- Turnstileを有効にする場合は Cloudflare でキーを取得し `config.production.php` に記入して再転送
+- 更新時も同じスクリプトを再実行すればよい(上書き転送)

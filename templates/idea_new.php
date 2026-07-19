@@ -3,7 +3,7 @@ use App\Support\Csrf;
 ?>
 <div class="form-page">
   <h1>新しいアイディア</h1>
-  <form method="post" action="/ideas">
+  <form method="post" action="<?= bp() ?>/ideas">
     <?= Csrf::field() ?>
     <label>タイトル
       <input type="text" name="title" required maxlength="200" placeholder="アイディアを一言で">

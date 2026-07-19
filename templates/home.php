@@ -1,7 +1,7 @@
 <?php /** @var array $ideas, $tagsByIdea, $allTags */ ?>
 <div class="page-head">
   <h1>アイディア一覧</h1>
-  <form method="get" action="/" class="search-form">
+  <form method="get" action="<?= bp() ?>/" class="search-form">
     <input type="search" name="q" value="<?= e($search) ?>" placeholder="キーワード検索">
     <?php if ($tag !== ''): ?><input type="hidden" name="tag" value="<?= e($tag) ?>"><?php endif; ?>
     <button type="submit" class="btn">検索</button>
@@ -10,9 +10,9 @@
 
 <?php if ($allTags): ?>
 <div class="tag-cloud">
-  <?php if ($tag !== '' || $search !== ''): ?><a class="tag-chip tag-clear" href="/">すべて表示</a><?php endif; ?>
+  <?php if ($tag !== '' || $search !== ''): ?><a class="tag-chip tag-clear" href="<?= bp() ?>/">すべて表示</a><?php endif; ?>
   <?php foreach ($allTags as $t): ?>
-    <a class="tag-chip <?= $t['name'] === $tag ? 'active' : '' ?>" href="/?tag=<?= urlencode($t['name']) ?>">
+    <a class="tag-chip <?= $t['name'] === $tag ? 'active' : '' ?>" href="<?= bp() ?>/?tag=<?= urlencode($t['name']) ?>">
       <?= e($t['name']) ?> <span class="tag-count"><?= (int)$t['cnt'] ?></span>
     </a>
   <?php endforeach; ?>
@@ -26,7 +26,7 @@
   <?php foreach ($ideas as $i): ?>
   <li class="idea-card <?= $i['status'] === 'hidden' ? 'is-hidden' : '' ?>">
     <div class="idea-main">
-      <a class="idea-title" href="/ideas/<?= (int)$i['id'] ?>"><?= e($i['title']) ?></a>
+      <a class="idea-title" href="<?= bp() ?>/ideas/<?= (int)$i['id'] ?>"><?= e($i['title']) ?></a>
       <div class="idea-meta">
         <span><?= e($i['display_name']) ?></span>
         <span><?= e(fmt_date($i['updated_at'])) ?></span>
@@ -36,7 +36,7 @@
       <?php if (!empty($tagsByIdea[(int)$i['id']])): ?>
       <div class="idea-tags">
         <?php foreach ($tagsByIdea[(int)$i['id']] as $tn): ?>
-          <a class="tag-chip small" href="/?tag=<?= urlencode($tn) ?>"><?= e($tn) ?></a>
+          <a class="tag-chip small" href="<?= bp() ?>/?tag=<?= urlencode($tn) ?>"><?= e($tn) ?></a>
         <?php endforeach; ?>
       </div>
       <?php endif; ?>

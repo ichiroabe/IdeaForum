@@ -13,10 +13,11 @@ use Slim\App;
 use Slim\Exception\HttpForbiddenException;
 use Slim\Psr7\Response as SlimResponse;
 
-// リダイレクトヘルパー(テンプレート/コントローラ共用)
+// リダイレクトヘルパー(テンプレート/コントローラ共用)。サブフォルダ設置に追随する。
 function redirect(Response $response, string $path): Response
 {
-    return $response->withHeader('Location', $path)->withStatus(302);
+    // このファイルは use Slim\App; を持つため、先頭の \ は必須(App が Slim\App に解決されてしまう)
+    return $response->withHeader('Location', \App\Support\App::path($path))->withStatus(302);
 }
 
 return function (App $app): void {

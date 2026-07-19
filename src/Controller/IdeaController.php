@@ -166,10 +166,12 @@ final class IdeaController
             'INSERT INTO posts (idea_id, user_id, body, created_at) VALUES (?, ?, ?, ?)',
             [$idea['id'], $userId, $body, $now]
         );
+        // lastId() は後続のUPDATEで0に戻るため、INSERT直後に控える
+        $postId = Db::lastId();
         Db::query('UPDATE ideas SET posts_count = posts_count + 1, updated_at = ? WHERE id = ?', [$now, $idea['id']]);
 
         Flash::add('success', '返信を投稿しました。');
-        return redirect($response, '/ideas/' . $idea['id'] . '#post-' . Db::lastId());
+        return redirect($response, '/ideas/' . $idea['id'] . '#post-' . $postId);
     }
 
     public function report(Request $request, Response $response): Response

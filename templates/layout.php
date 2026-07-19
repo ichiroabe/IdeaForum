@@ -14,26 +14,26 @@ $siteName = (string)App::config('site_name', 'IdeaForum');
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e(isset($title) && $title !== null ? $title . ' - ' . $siteName : $siteName) ?></title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="<?= bp() ?>/assets/style.css">
 </head>
 <body>
 <header class="site-header">
   <div class="container header-inner">
-    <a class="brand" href="/"><?= e($siteName) ?></a>
+    <a class="brand" href="<?= bp() ?>/"><?= e($siteName) ?></a>
     <nav class="nav">
       <?php if ($user && $user['status'] === 'active'): ?>
-        <a class="btn btn-primary" href="/ideas/new">+ アイディアを出す</a>
+        <a class="btn btn-primary" href="<?= bp() ?>/ideas/new">+ アイディアを出す</a>
       <?php endif; ?>
       <?php if ($user): ?>
-        <?php if ($user['role'] === 'admin'): ?><a href="/admin">管理</a><?php endif; ?>
+        <?php if ($user['role'] === 'admin'): ?><a href="<?= bp() ?>/admin">管理</a><?php endif; ?>
         <span class="username"><?= e($user['display_name']) ?></span>
-        <form method="post" action="/logout" class="inline-form">
+        <form method="post" action="<?= bp() ?>/logout" class="inline-form">
           <?= Csrf::field() ?>
           <button type="submit" class="link-btn">ログアウト</button>
         </form>
       <?php else: ?>
-        <a href="/login">ログイン</a>
-        <a class="btn btn-primary" href="/register">新規登録</a>
+        <a href="<?= bp() ?>/login">ログイン</a>
+        <a class="btn btn-primary" href="<?= bp() ?>/register">新規登録</a>
       <?php endif; ?>
     </nav>
   </div>

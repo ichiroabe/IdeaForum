@@ -25,9 +25,22 @@ final class App
         return $value;
     }
 
+    // サブフォルダ設置時のプレフィックス (例: '/ideaforum')。直下設置なら空文字。
+    public static function basePath(): string
+    {
+        return rtrim((string)self::config('base_path', ''), '/');
+    }
+
+    // サイト内リンク用の絶対パス
+    public static function path(string $path = ''): string
+    {
+        return self::basePath() . $path;
+    }
+
+    // メール本文などに入れる完全URL
     public static function baseUrl(string $path = ''): string
     {
-        return rtrim((string)self::config('base_url'), '/') . $path;
+        return rtrim((string)self::config('base_url'), '/') . self::path($path);
     }
 
     public static function clientIp(): string

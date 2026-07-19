@@ -4,7 +4,10 @@
 return [
     // サイト
     'site_name' => 'IdeaForum',
-    'base_url'  => 'https://example.com',   // 末尾スラッシュなし
+    'base_url'  => 'https://example.com',   // スキーム+ホスト。末尾スラッシュなし
+    // サブフォルダに設置する場合のパス (例: '/ideaforum')。
+    // ドキュメントルート直下なら空文字のままにする。
+    'base_path' => '',
     'timezone'  => 'Asia/Tokyo',
     'debug'     => false,                    // 本番では必ず false
 

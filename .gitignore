@@ -1,5 +1,6 @@
 /vendor/
 /config/config.php
+/config/config.production.php
 /storage/mail/*
 /storage/logs/*
 !/storage/mail/.gitkeep

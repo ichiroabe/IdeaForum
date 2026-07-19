@@ -5,7 +5,7 @@ use App\Support\Turnstile;
 <div class="auth-box">
   <h1>新規登録</h1>
   <p class="note">登録にはメールアドレスの確認が必要です。確認メールのリンクを開くと投稿できるようになります。</p>
-  <form method="post" action="/register">
+  <form method="post" action="<?= bp() ?>/register">
     <?= Csrf::field() ?>
     <label>メールアドレス
       <input type="email" name="email" required maxlength="255" autocomplete="email">
@@ -24,5 +24,5 @@ use App\Support\Turnstile;
     <?= Turnstile::widget() ?>
     <button type="submit" class="btn btn-primary btn-block">登録する</button>
   </form>
-  <p class="auth-alt">アカウントをお持ちの方は <a href="/login">ログイン</a></p>
+  <p class="auth-alt">アカウントをお持ちの方は <a href="<?= bp() ?>/login">ログイン</a></p>
 </div>

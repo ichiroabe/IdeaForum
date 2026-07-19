@@ -28,6 +28,9 @@ session_name('ideaforum_sid');
 session_start();
 
 $app = AppFactory::create();
+if (IdeaForum::basePath() !== '') {
+    $app->setBasePath(IdeaForum::basePath());
+}
 $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 
