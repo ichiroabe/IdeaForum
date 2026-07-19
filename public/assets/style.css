@@ -297,13 +297,43 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
+/* 付箋内のインライン編集フォーム (prompt の置き換え) */
+.sticky.is-editing { z-index: 30; width: 240px; min-height: 0; padding-bottom: 8px; }
+.sticky-form { display: flex; flex-direction: column; gap: 6px; }
+.sticky-input {
+  width: 100%; margin: 0; font-size: 0.85rem; line-height: 1.5;
+  border: 1px solid rgba(0, 0, 0, 0.18); border-radius: 4px; padding: 6px;
+  resize: vertical; min-height: 68px; background: rgba(255, 255, 255, 0.9);
+}
+.sticky-reason {
+  width: 100%; margin: 0; font-size: 0.8rem;
+  border: 1px solid var(--warn); border-radius: 4px; padding: 5px 6px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.sticky-error { margin: 0; font-size: 0.78rem; color: var(--danger); }
+.sticky-error:empty { display: none; }
+.sticky-form-row { display: flex; gap: 6px; }
+.sticky-form-row .btn { padding: 3px 10px; font-size: 0.82rem; }
+
+/* 削除などの確認 */
+.confirm-pop {
+  position: absolute; top: 4px; left: 4px; right: 4px; z-index: 40;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  padding: 10px; display: flex; flex-direction: column; gap: 6px;
+}
+/* 線の削除確認はボード上の任意の位置に置く */
+.confirm-pop.is-floating { right: auto; width: 240px; transform: translate(-50%, -50%); }
+.confirm-message { margin: 0; font-size: 0.82rem; }
+
 /* 色の選択パレット */
 .palette {
   position: absolute; top: 22px; right: 2px; z-index: 20;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
-  padding: 4px; display: flex; flex-direction: column; gap: 2px; min-width: 96px;
+  padding: 4px; display: flex; flex-direction: column; gap: 2px; min-width: 130px;
 }
+.palette .sticky-reason { margin-bottom: 2px; }
 .palette-swatch {
   border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 3px; cursor: pointer;
   font-size: 0.75rem; padding: 3px 6px; text-align: left; color: var(--text);
