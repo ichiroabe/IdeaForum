@@ -1,0 +1,28 @@
+{
+    "name": "ichiroabe/ideaforum",
+    "description": "openManidoc連携アイディア出し掲示板 (ロリポップ/PHP+MySQL)",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-mbstring": "*",
+        "slim/slim": "^4.14",
+        "slim/psr7": "^1.7",
+        "erusev/parsedown": "^1.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "config": {
+        "platform": {
+            "php": "8.1.0"
+        },
+        "optimize-autoloader": true
+    }
+}

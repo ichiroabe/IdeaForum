@@ -1,0 +1,8 @@
+# 公開フォルダを public/ に設定できない場合の保険。Webからの直接アクセスを拒否する。
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
