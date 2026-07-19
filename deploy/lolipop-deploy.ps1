@@ -44,7 +44,10 @@ param(
     [string]$LocalRoot = (Split-Path -Parent $PSScriptRoot),
 
     # サーバーにあってローカルに無いファイルを削除する
-    [switch]$Mirror
+    [switch]$Mirror,
+
+    # 未適用のSQLがあっても転送を強行する (通常は使わない)
+    [switch]$SkipMigrationCheck
 )
 
 $ErrorActionPreference = 'Stop'
@@ -73,6 +76,32 @@ $denyHtaccess = @'
     Deny from all
 </IfModule>
 '@
+
+# --- 0. DBの変更が本番に適用済みか確かめる -----------------------------------
+# コードだけ先に送るとカラムが無くて500になる。実際に一度やらかしたので確認を挟む。
+if (-not $SkipMigrationCheck) {
+    $appliedFile = Join-Path $PSScriptRoot 'applied-migrations.txt'
+    $applied = @()
+    if (Test-Path $appliedFile) {
+        $applied = Get-Content $appliedFile |
+                   Where-Object { $_ -notmatch '^\s*#' -and $_.Trim() -ne '' } |
+                   ForEach-Object { $_.Trim() }
+    }
+    $allSql = Get-ChildItem (Join-Path $LocalRoot 'sql') -Filter '*.sql' -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -ne 'make-admin.sql' } |   # 手順書どおり後から流すもの
+              Select-Object -ExpandProperty Name
+    $pending = @($allSql | Where-Object { $applied -notcontains $_ })
+
+    if ($pending.Count -gt 0) {
+        Write-Host ""
+        Write-Warning "本番DBに未適用のSQLがあります。先にphpMyAdminで実行してください:"
+        $pending | Sort-Object | ForEach-Object { Write-Host ("    sql/{0}" -f $_) }
+        Write-Host ""
+        Write-Host "実行したら deploy\applied-migrations.txt にファイル名を追記してから、もう一度お試しください。"
+        Write-Host "(どうしても先に転送する場合は -SkipMigrationCheck)"
+        throw "未適用のDB変更があるため転送を中止しました。"
+    }
+}
 
 # --- 1. 転送する状態を一時フォルダに組み立てる -------------------------------
 $prodConfig = Join-Path $LocalRoot 'config/config.production.php'
