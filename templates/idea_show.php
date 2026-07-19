@@ -51,9 +51,12 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   <?php endif; ?>
 </article>
 
-<section class="board-section">
+<details class="board-section fold" id="fold-board" open>
+  <summary class="fold-summary">
+    <span class="fold-title">付箋ボード</span>
+    <span class="fold-hint">クリックで開閉</span>
+  </summary>
   <div class="board-head">
-    <h2>付箋ボード</h2>
     <?php if ($canPost): ?>
       <button type="button" class="btn btn-primary board-add">+ 付箋を追加</button>
     <?php endif; ?>
@@ -79,10 +82,13 @@ $currentPath = '/ideas/' . (int)$idea['id'];
       </div>
     </div>
   </div>
-</section>
+</details>
 
-<section class="posts">
-  <h2>返信 (<?= count($posts) ?>)</h2>
+<details class="posts fold" id="fold-posts" open>
+  <summary class="fold-summary">
+    <span class="fold-title">返信 (<?= count($posts) ?>)</span>
+    <span class="fold-hint">クリックで開閉</span>
+  </summary>
   <?php foreach ($posts as $p): ?>
     <?php if ($p['status'] === 'hidden' && !Auth::isAdmin()): ?>
       <div class="post post-hidden" id="post-<?= (int)$p['id'] ?>"><p class="note">この投稿は非表示になっています。</p></div>
@@ -121,7 +127,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
           <?php endif; ?>
         </span>
       </div>
-      <div class="md-body"><?= Text::markdown($p['body']) ?></div>
+      <div class="md-body is-clampable"><?= Text::markdown($p['body']) ?></div>
     </div>
   <?php endforeach; ?>
 
@@ -142,6 +148,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   <?php elseif ($idea['status'] === 'closed'): ?>
   <p class="note">このスレッドは閉じられています。</p>
   <?php endif; ?>
-</section>
+</details>
 
+<script src="<?= bp() ?>/assets/fold.js" defer></script>
 <script src="<?= bp() ?>/assets/board.js" defer></script>

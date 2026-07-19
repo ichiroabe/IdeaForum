@@ -153,9 +153,45 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 .report-box input[type="text"] { margin: 0; flex: 1; }
 .report-box.small { display: inline-block; margin: 0; }
 
+/* --- 折りたたみ --- */
+.fold { margin-top: 28px; }
+.fold-summary {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; list-style: none; padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.fold-summary::-webkit-details-marker { display: none; }
+/* 開閉の向きを三角で示す */
+.fold-summary::before {
+  content: ''; flex-shrink: 0;
+  border-left: 6px solid var(--muted);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transition: transform 0.15s;
+}
+.fold[open] > .fold-summary::before { transform: rotate(90deg); }
+.fold-summary:hover { background: var(--surface); }
+.fold-summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.fold-title { font-size: 1.1rem; font-weight: 700; }
+.fold-hint { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+
+/* 長い返信の途中切り */
+.md-body.is-clamped {
+  max-height: 320px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+}
+.clamp-toggle { margin-top: 4px; font-size: 0.85rem; }
+
+/* アンカーで飛んできた投稿を一瞬目立たせる */
+.is-highlighted { animation: flash 2s ease-out; }
+@keyframes flash {
+  from { background: #fef9c3; }
+  to   { background: transparent; }
+}
+
 /* --- 付箋ボード --- */
-.board-section { margin-top: 28px; }
-.board-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.board-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 .board-head h2 { font-size: 1.1rem; margin: 0; }
 .board-status { font-size: 0.85rem; color: var(--muted); }
 .board-status.is-error { color: var(--danger); }
