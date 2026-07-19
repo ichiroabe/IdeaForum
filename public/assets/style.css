@@ -202,6 +202,46 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 }
 .sticky-tools button:hover { background: #fff; }
 
+.sticky.is-deleted { opacity: 0.45; filter: grayscale(0.6); }
+
+/* 色の意味を示す凡例 */
+.board-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0 4px; font-size: 0.82rem; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: 5px; }
+.legend-swatch {
+  display: inline-block; width: 13px; height: 13px; border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* 色の選択パレット */
+.palette {
+  position: absolute; top: 22px; right: 2px; z-index: 20;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  padding: 4px; display: flex; flex-direction: column; gap: 2px; min-width: 96px;
+}
+.palette-swatch {
+  border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 3px; cursor: pointer;
+  font-size: 0.75rem; padding: 3px 6px; text-align: left; color: var(--text);
+}
+.palette-swatch.is-current { outline: 2px solid var(--primary); outline-offset: -1px; }
+
+/* 履歴パネル */
+.board-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px; margin: 10px 0;
+}
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.panel-head h3 { margin: 0; font-size: 1rem; }
+.panel-quote {
+  background: var(--bg); border-left: 3px solid var(--border);
+  padding: 6px 10px; margin: 8px 0; font-size: 0.88rem; white-space: pre-wrap;
+}
+.history { margin: 0; padding-left: 1.3em; font-size: 0.86rem; }
+.history li { margin-bottom: 8px; }
+.history-head { color: var(--text); }
+.history-reason { color: var(--warn); }
+.history-diff { color: var(--muted); word-break: break-word; }
+
 .sticky-yellow { background: #fef9c3; }
 .sticky-blue   { background: #dbeafe; }
 .sticky-green  { background: #dcfce7; }

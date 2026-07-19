@@ -91,9 +91,11 @@ return function (App $app): void {
 
     // 付箋ボード。閲覧は誰でも、編集はメール確認済みのメンバー。
     $app->get('/ideas/{id:[0-9]+}/notes', [NoteController::class, 'index']);
+    $app->get('/ideas/{id:[0-9]+}/notes/{noteId:[0-9]+}/history', [NoteController::class, 'history']);
     $app->post('/ideas/{id:[0-9]+}/notes', [NoteController::class, 'createNote'])->add($requireActive);
     $app->patch('/ideas/{id:[0-9]+}/notes/{noteId:[0-9]+}', [NoteController::class, 'updateNote'])->add($requireActive);
     $app->delete('/ideas/{id:[0-9]+}/notes/{noteId:[0-9]+}', [NoteController::class, 'deleteNote'])->add($requireActive);
+    $app->post('/ideas/{id:[0-9]+}/notes/{noteId:[0-9]+}/restore', [NoteController::class, 'restoreNote'])->add($requireAdmin);
     $app->post('/ideas/{id:[0-9]+}/links', [NoteController::class, 'createLink'])->add($requireActive);
     $app->delete('/ideas/{id:[0-9]+}/links/{linkId:[0-9]+}', [NoteController::class, 'deleteLink'])->add($requireActive);
 

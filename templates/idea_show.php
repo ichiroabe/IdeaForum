@@ -59,11 +59,16 @@ $currentPath = '/ideas/' . (int)$idea['id'];
     <?php endif; ?>
     <span class="board-status"></span>
   </div>
+  <div class="board-legend"></div>
   <?php if (!$canPost): ?>
     <p class="note">付箋の追加・編集には <a href="<?= bp() ?>/login">ログイン</a> が必要です。</p>
   <?php else: ?>
-    <p class="note">付箋はドラッグで移動できます。「連」を押してから別の付箋をクリックすると線でつながります。線をクリックすると削除できます。</p>
+    <p class="note">
+      ドラッグで移動。「連」を押してから別の付箋をクリックすると線でつながり、線をクリックで削除できます。
+      他の人が作った付箋を変更・削除するときは理由の入力が必要で、「履」からその付箋の履歴を確認できます。
+    </p>
   <?php endif; ?>
+  <div class="board-panel" hidden></div>
   <div id="board" class="board"
        data-idea-id="<?= (int)$idea['id'] ?>"
        data-base="<?= e(bp()) ?>"

@@ -13,19 +13,24 @@
 
   const canvas = root.querySelector('.board-canvas');
   const svg = root.querySelector('.board-lines');
-  // 見出し行にあるため #board の外。document から探す。
+  // 見出し行や凡例は #board の外にあるので document から探す
   const status = document.querySelector('.board-status');
+  const legend = document.querySelector('.board-legend');
+  const panel = document.querySelector('.board-panel');
 
   const NOTE_W = 180;
   const NOTE_H = 110;
 
   let notes = [];
   let links = [];
+  let colors = {};
   let canEdit = false;
-  let linkFrom = null; // 連結モードで始点に選ばれた付箋ID
+  let isAdmin = false;
+  let me = null;
+  let linkFrom = null;
 
   function say(message, isError) {
-    if (!status) return;   // 表示先が無くても操作自体は続行させる
+    if (!status) return;
     status.textContent = message || '';
     status.classList.toggle('is-error', !!isError);
     if (message && !isError) {
@@ -46,9 +51,27 @@
     let data = null;
     try { data = await res.json(); } catch (e) { /* 本文が空の場合 */ }
     if (!res.ok) {
-      throw new Error((data && data.error) || ('通信に失敗しました (' + res.status + ')'));
+      const err = new Error((data && data.error) || ('通信に失敗しました (' + res.status + ')'));
+      err.reasonRequired = !!(data && data.reasonRequired);
+      throw err;
     }
     return data;
+  }
+
+  const isMine = n => me !== null && n.userId === me;
+
+  // 他人の付箋を触るときは理由を必ず聞く。null を返したら操作中止。
+  function askReason(n, what) {
+    if (isMine(n)) return '';
+    const r = prompt(
+      '他の人が作った付箋を' + what + 'します。\n' +
+      '理由を書いてください(履歴に残り、他の人にも見えます)',
+      ''
+    );
+    if (r === null) return null;
+    const t = r.trim();
+    if (t === '') { say('理由が未入力のため中止しました。', true); return null; }
+    return t;
   }
 
   // --- 描画 -----------------------------------------------------------------
@@ -62,7 +85,7 @@
 
   function buildNote(n) {
     const el = document.createElement('div');
-    el.className = 'sticky sticky-' + n.color;
+    el.className = 'sticky sticky-' + n.color + (n.deleted ? ' is-deleted' : '');
     el.dataset.id = n.id;
     el.style.left = n.x + 'px';
     el.style.top = n.y + 'px';
@@ -75,22 +98,28 @@
 
     const meta = document.createElement('div');
     meta.className = 'sticky-meta';
-    meta.textContent = n.author + (n.postId ? ' (返信より)' : '');
+    meta.textContent = n.author + (n.postId ? ' (返信より)' : '') + (n.deleted ? ' [削除済]' : '');
     el.appendChild(meta);
 
-    if (canEdit) {
-      const tools = document.createElement('div');
-      tools.className = 'sticky-tools';
+    const tools = document.createElement('div');
+    tools.className = 'sticky-tools';
+    if (n.events > 0) {
+      tools.appendChild(toolButton('履', 'この付箋の履歴を見る', e => { e.stopPropagation(); showHistory(n); }));
+    }
+    if (canEdit && !n.deleted) {
       tools.appendChild(toolButton('連', 'ここから線をつなぐ', e => { e.stopPropagation(); startLink(n.id); }));
       tools.appendChild(toolButton('編', '文面を変える', e => { e.stopPropagation(); editNote(n); }));
-      tools.appendChild(toolButton('色', '色を変える', e => { e.stopPropagation(); cycleColor(n); }));
+      tools.appendChild(toolButton('色', '色で分類する', e => { e.stopPropagation(); openPalette(n, el); }));
       tools.appendChild(toolButton('×', 'この付箋を削除', e => { e.stopPropagation(); removeNote(n); }));
-      el.appendChild(tools);
       makeDraggable(el, n);
     }
+    if (isAdmin && n.deleted) {
+      tools.appendChild(toolButton('復', 'この付箋を復元', e => { e.stopPropagation(); restoreNote(n); }));
+    }
+    if (tools.children.length) el.appendChild(tools);
 
     el.addEventListener('click', () => {
-      if (linkFrom !== null && linkFrom !== n.id) finishLink(n.id);
+      if (linkFrom !== null && linkFrom !== n.id && !n.deleted) finishLink(n.id);
     });
     return el;
   }
@@ -144,7 +173,6 @@
     });
   }
 
-  // 付箋が右下へ広がってもスクロールで追えるようにする
   function resizeCanvas() {
     let maxX = 900, maxY = 500;
     notes.forEach(n => {
@@ -156,6 +184,20 @@
     svg.setAttribute('width', maxX);
     svg.setAttribute('height', maxY);
     svg.setAttribute('viewBox', '0 0 ' + maxX + ' ' + maxY);
+  }
+
+  function buildLegend() {
+    if (!legend) return;
+    legend.innerHTML = '';
+    Object.keys(colors).forEach(key => {
+      const item = document.createElement('span');
+      item.className = 'legend-item';
+      const swatch = document.createElement('i');
+      swatch.className = 'legend-swatch sticky-' + key;
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(colors[key]));
+      legend.appendChild(item);
+    });
   }
 
   // --- 操作 -----------------------------------------------------------------
@@ -189,6 +231,7 @@
       el.classList.remove('is-dragging');
       if (!moved) return;
       resizeCanvas();
+      // 位置だけの移動は理由も履歴も不要
       try {
         await call('/notes/' + n.id, { method: 'PATCH', body: JSON.stringify({ pos_x: n.x, pos_y: n.y }) });
       } catch (e) {
@@ -198,7 +241,6 @@
   }
 
   async function addNote(body, sourcePostId) {
-    // 既存の付箋と重ならない位置を適当に選ぶ
     const x = 40 + (notes.length % 5) * 200;
     const y = 40 + Math.floor(notes.length / 5) * 140;
     try {
@@ -219,35 +261,93 @@
     if (body === null) return;
     const trimmed = body.trim();
     if (trimmed === '') { say('内容が空です。', true); return; }
+    if (trimmed === n.body) return;
+
+    const reason = askReason(n, '変更');
+    if (reason === null) return;
+
     try {
-      await call('/notes/' + n.id, { method: 'PATCH', body: JSON.stringify({ body: trimmed }) });
+      await call('/notes/' + n.id, {
+        method: 'PATCH',
+        body: JSON.stringify({ body: trimmed, reason: reason })
+      });
       n.body = trimmed;
+      n.events++;
       render();
+      say('変更しました。');
     } catch (e) {
       say(e.message, true);
     }
   }
 
-  async function cycleColor(n) {
-    const colors = ['yellow', 'blue', 'green', 'pink', 'gray'];
-    const next = colors[(colors.indexOf(n.color) + 1) % colors.length];
+  // 色のパレットを付箋のそばに開く
+  function openPalette(n, el) {
+    closePalette();
+    const box = document.createElement('div');
+    box.className = 'palette';
+    Object.keys(colors).forEach(key => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'palette-swatch sticky-' + key + (n.color === key ? ' is-current' : '');
+      b.title = colors[key];
+      b.textContent = colors[key];
+      b.addEventListener('click', ev => { ev.stopPropagation(); closePalette(); setColor(n, key); });
+      box.appendChild(b);
+    });
+    el.appendChild(box);
+    setTimeout(() => document.addEventListener('click', closePalette, { once: true }), 0);
+  }
+
+  function closePalette() {
+    document.querySelectorAll('.palette').forEach(p => p.remove());
+  }
+
+  async function setColor(n, color) {
+    if (color === n.color) return;
+    const reason = askReason(n, '色替え');
+    if (reason === null) return;
     try {
-      await call('/notes/' + n.id, { method: 'PATCH', body: JSON.stringify({ color: next }) });
-      n.color = next;
+      await call('/notes/' + n.id, {
+        method: 'PATCH',
+        body: JSON.stringify({ color: color, reason: reason })
+      });
+      n.color = color;
+      n.events++;
       render();
+      say('色を変えました。');
     } catch (e) {
       say(e.message, true);
     }
   }
 
   async function removeNote(n) {
-    if (!confirm('この付箋を削除します。つながっている線も消えます。')) return;
+    const reason = askReason(n, '削除');
+    if (reason === null) return;
+    if (isMine(n) && !confirm('この付箋を削除します。よろしいですか?')) return;
+
     try {
-      await call('/notes/' + n.id, { method: 'DELETE' });
-      notes = notes.filter(x => x.id !== n.id);
+      await call('/notes/' + n.id, { method: 'DELETE', body: JSON.stringify({ reason: reason }) });
+      if (isAdmin) {
+        n.deleted = true;
+        n.events++;
+      } else {
+        notes = notes.filter(x => x.id !== n.id);
+      }
       links = links.filter(l => l.from !== n.id && l.to !== n.id);
       render();
-      say('削除しました。');
+      say('削除しました。管理者が復元できます。');
+    } catch (e) {
+      say(e.message, true);
+    }
+  }
+
+  async function restoreNote(n) {
+    try {
+      await call('/notes/' + n.id + '/restore', { method: 'POST', body: '{}' });
+      n.deleted = false;
+      n.events++;
+      render();
+      say('復元しました。');
     } catch (e) {
       say(e.message, true);
     }
@@ -284,9 +384,88 @@
     }
   }
 
+  // --- 履歴 -----------------------------------------------------------------
+
+  const ACTION_LABEL = {
+    create: '作成', edit: '文面変更', color: '色変更', delete: '削除', restore: '復元'
+  };
+
+  async function showHistory(n) {
+    if (!panel) return;
+    panel.innerHTML = '<p class="note">読み込み中...</p>';
+    panel.hidden = false;
+
+    try {
+      const data = await call('/notes/' + n.id + '/history', { method: 'GET' });
+      panel.innerHTML = '';
+
+      const head = document.createElement('div');
+      head.className = 'panel-head';
+      const h = document.createElement('h3');
+      h.textContent = '付箋の履歴';
+      head.appendChild(h);
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'btn';
+      close.textContent = '閉じる';
+      close.addEventListener('click', () => { panel.hidden = true; });
+      head.appendChild(close);
+      panel.appendChild(head);
+
+      const quote = document.createElement('p');
+      quote.className = 'panel-quote';
+      quote.textContent = n.body;
+      panel.appendChild(quote);
+
+      const list = document.createElement('ol');
+      list.className = 'history';
+      data.events.forEach(ev => {
+        const li = document.createElement('li');
+
+        const line = document.createElement('div');
+        line.className = 'history-head';
+        line.textContent = ev.at + ' ' + ev.actor + ' が' + (ACTION_LABEL[ev.action] || ev.action);
+        li.appendChild(line);
+
+        if (ev.reason) {
+          const r = document.createElement('div');
+          r.className = 'history-reason';
+          r.textContent = '理由: ' + ev.reason;
+          li.appendChild(r);
+        }
+        if (ev.action === 'edit' && ev.beforeBody !== null) {
+          const d = document.createElement('div');
+          d.className = 'history-diff';
+          d.textContent = '変更前: ' + ev.beforeBody;
+          li.appendChild(d);
+        }
+        if (ev.action === 'color') {
+          const d = document.createElement('div');
+          d.className = 'history-diff';
+          d.textContent = (colors[ev.beforeColor] || ev.beforeColor) + ' → ' + (colors[ev.afterColor] || ev.afterColor);
+          li.appendChild(d);
+        }
+        if (ev.action === 'delete' && ev.beforeBody !== null) {
+          const d = document.createElement('div');
+          d.className = 'history-diff';
+          d.textContent = '削除時の内容: ' + ev.beforeBody;
+          li.appendChild(d);
+        }
+        list.appendChild(li);
+      });
+      panel.appendChild(list);
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) {
+      panel.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'note';
+      p.textContent = e.message;
+      panel.appendChild(p);
+    }
+  }
+
   // --- 起動 -----------------------------------------------------------------
 
-  // 追加ボタンは #board の外(見出し行)にあるので document から探す
   document.querySelector('.board-add')?.addEventListener('click', () => {
     const body = prompt('付箋の内容');
     if (body === null) return;
@@ -295,13 +474,10 @@
     addNote(trimmed, null);
   });
 
-  // 返信の「付箋にする」ボタン
   document.querySelectorAll('[data-note-from-post]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const postId = btn.dataset.noteFromPost;
-      const text = btn.dataset.noteBody || '';
-      addNote(text.slice(0, 500), postId);
-      document.getElementById('board')?.scrollIntoView({ behavior: 'smooth' });
+      addNote((btn.dataset.noteBody || '').slice(0, 500), btn.dataset.noteFromPost);
+      root.scrollIntoView({ behavior: 'smooth' });
     });
   });
 
@@ -309,9 +485,13 @@
     try {
       const data = await call('/notes', { method: 'GET' });
       canEdit = data.canEdit;
+      isAdmin = data.isAdmin;
+      me = data.me;
+      colors = data.colors;
       notes = data.notes;
       links = data.links;
       root.classList.toggle('can-edit', canEdit);
+      buildLegend();
       render();
     } catch (e) {
       say(e.message, true);
