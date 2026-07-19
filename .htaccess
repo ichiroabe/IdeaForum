@@ -1,0 +1,10 @@
+# サブフォルダ設置時の入口。
+# アプリの公開フォルダは public/ だが、ロリポップでは公開フォルダを
+# サブフォルダ単位で指定できないため、ここへの要求をすべて public/ へ内部転送する。
+# (内部転送なのでブラウザのURLに public/ は出ない)
+RewriteEngine On
+RewriteBase /ideaforum/
+
+# 転送済みの要求を再度転送しない(無限ループ防止)
+RewriteCond %{REQUEST_URI} !^/ideaforum/public/
+RewriteRule ^(.*)$ public/$1 [L]
