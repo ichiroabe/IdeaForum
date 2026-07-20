@@ -142,7 +142,9 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 }
 .idea-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 .idea-detail-head h1 { margin: 0; font-size: 1.4rem; }
-.idea-actions { display: flex; gap: 8px; flex-shrink: 0; }
+/* ボタンが増えたので折り返す。狭い画面では横に並びきらず、
+   ページ全体が横スクロールしてしまうため。 */
+.idea-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .md-body { margin-top: 12px; overflow-wrap: break-word; }
 .md-body pre {
   background: #f3f4f6; padding: 12px; border-radius: var(--radius); overflow-x: auto;
@@ -301,11 +303,39 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   margin-top: 8px;
 }
-.board-scroll { overflow: auto; max-height: 560px; border-radius: var(--radius); }
+/* 高さは画面に追随させる。固定だと大きな画面でも小窓のままになり、
+   余白があるのにスクロールを強いられる。 */
+.board-scroll {
+  overflow: auto; border-radius: var(--radius);
+  height: clamp(360px, 62vh, 900px);
+}
 .board-canvas {
-  position: relative; min-width: 900px; min-height: 500px;
+  position: relative; min-width: 100%; min-height: 100%;
   background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+/* 画面が広いときは、本文用の列幅を越えてボードだけ横に広げる。
+   ボードは文章と違って、幅があるほど見通しが良くなるため。 */
+@media (min-width: 1000px) {
+  .board-section {
+    width: min(94vw, 1500px);
+    margin-left: calc(50% - min(47vw, 750px));
+  }
+}
+
+/* 「広げる」で画面いっぱいに使う */
+.board.is-expanded {
+  position: fixed; inset: 0; z-index: 200; margin: 0;
+  border-radius: 0; display: flex; flex-direction: column;
+}
+.board.is-expanded .board-scroll { height: 100%; flex: 1; border-radius: 0; }
+body.board-expanded { overflow: hidden; }
+.board-expand-hint {
+  position: fixed; top: 8px; right: 12px; z-index: 201;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 4px 10px; font-size: 0.82rem; color: var(--muted);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .board-lines { position: absolute; inset: 0; pointer-events: none; }
 .board-lines .board-line { stroke: #94a3b8; stroke-width: 2; pointer-events: stroke; }

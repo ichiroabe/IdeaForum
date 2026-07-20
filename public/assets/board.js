@@ -88,12 +88,16 @@
     if (f.node && f.node.parentNode) f.node.remove();
   }
 
-  // Esc でいまの入力を取り消す
+  // Esc の扱いは1箇所にまとめる。ハンドラを分けると、
+  // stopPropagation() は同じ要素の他のリスナーを止めないため、
+  // 1回押しただけで入力の取消と縮小が同時に起きてしまう。
   document.addEventListener('keydown', ev => {
-    if (ev.key === 'Escape' && openForm) {
-      ev.stopPropagation();
+    if (ev.key !== 'Escape') return;
+    if (openForm) {            // 入力中なら、まずそれを取り消す
       closeForm();
       render();
+    } else if (root.classList.contains('is-expanded')) {
+      setExpanded(false);      // 何も開いていなければ拡大を解除
     }
   });
 
@@ -325,7 +329,11 @@
   }
 
   function resizeCanvas() {
-    let maxX = 900, maxY = 500;
+    // 下限は「いま見えている窓の大きさ」。固定値にすると、窓の方が
+    // 小さいときに常にスクロールが出てしまう。
+    const view = root.querySelector('.board-scroll');
+    let maxX = view ? view.clientWidth : 900;
+    let maxY = view ? view.clientHeight : 500;
     notes.forEach(n => {
       maxX = Math.max(maxX, n.x + NOTE_W + 60);
       maxY = Math.max(maxY, n.y + NOTE_H + 60);
@@ -388,11 +396,42 @@
     });
   }
 
+  /**
+   * 次に置く場所を決める。
+   *
+   * いま見えている範囲の空きを探す。枚数から機械的に決めると、
+   * 窓より広い位置や、はるか下の画面外に置かれてしまうため。
+   */
+  function nextPosition() {
+    const view = root.querySelector('.board-scroll');
+    const vw = view ? view.clientWidth : 900;
+    const vh = view ? view.clientHeight : 500;
+    const left = view ? view.scrollLeft : 0;
+    const top = view ? view.scrollTop : 0;
+
+    const stepX = NOTE_W + 20;
+    const stepY = NOTE_H + 30;
+    const cols = Math.max(1, Math.floor((vw - 40) / stepX));
+    const rows = Math.max(1, Math.floor((vh - 40) / stepY));
+
+    const taken = (x, y) => notes.some(n => Math.abs(n.x - x) < NOTE_W && Math.abs(n.y - y) < NOTE_H);
+
+    // まず見えている範囲を左上から順に探す
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = left + 20 + c * stepX;
+        const y = top + 20 + r * stepY;
+        if (!taken(x, y)) return { x, y };
+      }
+    }
+    // 見えている範囲が埋まっていれば、その少し下に置く
+    return { x: left + 20, y: top + vh - NOTE_H - 20 };
+  }
+
   /** 新しい付箋を編集モードで置く。確定して初めてサーバーに送る。 */
   function openNewNote(initialText, sourcePostId) {
     closeForm();
-    const x = 40 + (notes.length % 5) * 200;
-    const y = 40 + Math.floor(notes.length / 5) * 140;
+    const { x, y } = nextPosition();
 
     const node = el('div', 'sticky sticky-yellow is-editing');
     node.style.left = x + 'px';
@@ -672,6 +711,27 @@
   // --- 起動 -----------------------------------------------------------------
 
   document.querySelector('.board-add')?.addEventListener('click', () => openNewNote('', null));
+
+  // 画面いっぱいに広げる。狭い窓の中でスクロールし続けずに済むように。
+  const expandBtn = document.querySelector('.board-expand');
+  function setExpanded(on) {
+    root.classList.toggle('is-expanded', on);
+    document.body.classList.toggle('board-expanded', on);
+    if (expandBtn) expandBtn.textContent = on ? '元に戻す' : '広げる';
+
+    let hint = document.querySelector('.board-expand-hint');
+    if (on && !hint) {
+      hint = el('div', 'board-expand-hint');
+      hint.appendChild(document.createTextNode('Esc で戻る　'));
+      hint.appendChild(button('元に戻す', 'link-btn', () => setExpanded(false)));
+      document.body.appendChild(hint);
+    } else if (!on && hint) {
+      hint.remove();
+    }
+    resizeCanvas();
+    if (!on) root.scrollIntoView({ block: 'nearest' });
+  }
+  expandBtn?.addEventListener('click', () => setExpanded(!root.classList.contains('is-expanded')));
 
   // 返信の本文を引き継いだ付箋を編集モードで開く(長すぎる場合にその場で削れるように)
   document.querySelectorAll('[data-note-from-post]').forEach(btn => {

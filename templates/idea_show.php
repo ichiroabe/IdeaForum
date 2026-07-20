@@ -128,6 +128,7 @@ $currentPath = '/ideas/' . (int)$idea['id'];
     <?php if ($canPost): ?>
       <button type="button" class="btn btn-primary board-add">+ 付箋を追加</button>
     <?php endif; ?>
+    <button type="button" class="btn board-expand" title="ボードを画面いっぱいに広げます (Escで戻る)">広げる</button>
     <span class="board-status"></span>
   </div>
   <div class="board-legend"></div>
