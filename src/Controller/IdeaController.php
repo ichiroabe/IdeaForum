@@ -26,7 +26,12 @@ final class IdeaController
         $page = max(1, (int)($q['page'] ?? 1));
         $offset = ($page - 1) * self::PER_PAGE;
 
-        $where = ["i.status <> 'hidden'"];
+        // 管理者には非表示のものも出す。出さないと、非表示にした本人が
+        // 一覧からそれを辿れなくなり、戻す手立てが無くなるため。
+        $where = [];
+        if (!Auth::isAdmin()) {
+            $where[] = "i.status <> 'hidden'";
+        }
         $params = [];
         if ($tag !== '') {
             $where[] = 'EXISTS (SELECT 1 FROM idea_tags it JOIN tags t ON t.id = it.tag_id WHERE it.idea_id = i.id AND t.name = ?)';
@@ -38,7 +43,8 @@ final class IdeaController
             $params[] = $like;
             $params[] = $like;
         }
-        $whereSql = implode(' AND ', $where);
+        // 管理者かつ絞り込み無しだと条件が1つも無くなるため、その場合に備える
+        $whereSql = $where ? implode(' AND ', $where) : '1';
 
         $total = (int)Db::query("SELECT COUNT(*) FROM ideas i WHERE {$whereSql}", $params)->fetchColumn();
         $ideas = Db::query(
