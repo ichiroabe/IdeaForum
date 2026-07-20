@@ -11,3 +11,4 @@ schema.sql
 003-note-history.sql
 004-avatars.sql
 005-hidden-by.sql
+006-improvements.sql

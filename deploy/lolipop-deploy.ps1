@@ -54,7 +54,9 @@ $ErrorActionPreference = 'Stop'
 $LocalRoot = (Resolve-Path $LocalRoot).Path
 
 # 転送しないもの。開発専用ファイルと、本番設定を壊すものを除外する。
-$excludeDirs  = @('.git', 'deploy', 'docs', 'sql', 'node_modules')
+# tests は本番に置かない。DBへ直接つなぎ利用者を作り消すため、
+# 万一 .htaccess の書き換えが効かない状況では危険になる。
+$excludeDirs  = @('.git', 'deploy', 'docs', 'sql', 'tests', 'node_modules')
 $excludeFiles = @(
     'config/config.php',                  # ローカル開発用。本番を壊すので絶対に送らない
     'config/config.production.php',       # 中身は config/config.php として送る
