@@ -26,6 +26,7 @@ $siteName = (string)App::config('site_name', 'IdeaForum');
       <?php if ($user && $user['status'] === 'active'): ?>
         <a class="btn btn-primary" href="<?= bp() ?>/ideas/new">+ アイディアを出す</a>
       <?php endif; ?>
+      <a href="<?= bp() ?>/help">使い方</a>
       <?php if ($user): ?>
         <?php $newCount = Unread::count(); ?>
         <?php if ($newCount > 0): ?>
@@ -57,7 +58,7 @@ $siteName = (string)App::config('site_name', 'IdeaForum');
 </main>
 <footer class="site-footer">
   <div class="container">
-    <p><?= e($siteName) ?> — アイディアを出し合い、openManidocへ。</p>
+    <p><?= e($siteName) ?> — アイディアを出し合い、openManidocへ。 | <a href="<?= bp() ?>/help">使い方のヘルプ</a></p>
   </div>
 </footer>
 </body>

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use App\Controller\AdminController;
 use App\Controller\AuthController;
+use App\Controller\HelpController;
 use App\Controller\IdeaController;
 use App\Controller\NoteController;
 use App\Controller\SettingsController;
@@ -87,6 +88,7 @@ return function (App $app): void {
 
     // 公開ページ
     $app->get('/', [IdeaController::class, 'index']);
+    $app->get('/help', [HelpController::class, 'index']);
     $app->get('/ideas/{id:[0-9]+}', [IdeaController::class, 'show']);
     $app->get('/ideas/{id:[0-9]+}/export.md', [IdeaController::class, 'export']);
     // 「実装対象」の付箋だけを指示書の型で書き出す

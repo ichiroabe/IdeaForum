@@ -209,6 +209,41 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 .my-idea-list li.is-hidden { opacity: 0.6; }
 .my-idea-meta { color: var(--muted); font-size: 0.82rem; flex-shrink: 0; }
 
+/* --- 使い方のヘルプ --- */
+.help-page { display: flex; flex-direction: column; gap: 24px; }
+.help-lead { color: var(--muted); margin-top: 4px; }
+.help-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 22px;
+}
+.help-card > h2 {
+  margin-top: 0; font-size: 1.2rem;
+  border-bottom: 2px solid var(--primary); padding-bottom: 8px;
+}
+.help-card h3 { font-size: 1rem; margin: 18px 0 6px; }
+.help-card ul, .help-card ol { padding-left: 20px; line-height: 1.8; margin: 6px 0; }
+.help-card p { margin: 6px 0; }
+.help-note { color: var(--muted); font-size: 0.85rem; }
+
+/* 操作ボタンの説明を、実物と同じ見た目で示す */
+.help-key {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; padding: 1px 6px; margin: 0 2px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  font-size: 0.85em; font-weight: 700;
+}
+.help-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.9rem; }
+.help-table th, .help-table td {
+  border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top;
+}
+.help-table th { background: var(--bg); white-space: nowrap; }
+.help-table code { white-space: pre-wrap; }
+.help-swatch {
+  display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.15); vertical-align: -2px; margin-right: 5px;
+}
+.help-scroll { overflow-x: auto; }
+
 /* --- 折りたたみ --- */
 .fold { margin-top: 28px; }
 .fold-summary {
