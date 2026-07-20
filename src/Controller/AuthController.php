@@ -7,6 +7,7 @@ use App\Support\App;
 use App\Support\Auth;
 use App\Support\Db;
 use App\Support\Flash;
+use App\Support\Log;
 use App\Support\Mailer;
 use App\Support\RateLimiter;
 use App\Support\Turnstile;
@@ -182,6 +183,113 @@ final class AuthController
         return View::render($response, 'verify_notice', ['title' => '確認メールを送信しました']);
     }
 
+    // --- パスワード再設定 -----------------------------------------------------
+
+    public function showForgot(Request $request, Response $response): Response
+    {
+        return View::render($response, 'forgot', ['title' => 'パスワードの再設定']);
+    }
+
+    public function forgot(Request $request, Response $response): Response
+    {
+        $ip = App::clientIp();
+        if (!RateLimiter::hit('reset:ip:' . $ip, 5, 3600)) {
+            Flash::add('error', '再設定の要求が多すぎます。しばらく待ってからお試しください。');
+            return redirect($response, '/login');
+        }
+
+        $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
+        $user = Db::query("SELECT * FROM users WHERE email = ? AND status <> 'banned'", [$email])->fetch();
+
+        if ($user) {
+            // 未使用の古いトークンは無効化してから発行する
+            Db::query(
+                "UPDATE email_tokens SET used_at = ? WHERE user_id = ? AND purpose = 'reset' AND used_at IS NULL",
+                [Db::now(), $user['id']]
+            );
+            $token = bin2hex(random_bytes(32));
+            Db::query(
+                'INSERT INTO email_tokens (user_id, token_hash, purpose, expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
+                [$user['id'], hash('sha256', $token), 'reset', date('Y-m-d H:i:s', time() + 3600), Db::now()]
+            );
+            $site = (string)App::config('site_name');
+            $url = App::baseUrl('/reset?token=' . $token);
+            $body = "{$site} のパスワード再設定のご案内です。\n\n"
+                . "以下のURLを開いて新しいパスワードを設定してください(1時間有効):\n\n"
+                . "{$url}\n\n"
+                . "心当たりがない場合は、このメールを破棄してください。\n"
+                . "その場合、現在のパスワードは変わりません。\n";
+            if (!Mailer::send($email, "【{$site}】パスワードの再設定", $body)) {
+                Log::error('再設定メールを送れませんでした', ['user_id' => $user['id'], 'email' => $email]);
+            }
+        }
+
+        // 登録の有無は明かさない(利用者の存在を調べられないようにするため)
+        Flash::add('success', 'ご登録があれば、再設定用のメールをお送りしました。');
+        return redirect($response, '/login');
+    }
+
+    public function showReset(Request $request, Response $response): Response
+    {
+        $token = (string)($request->getQueryParams()['token'] ?? '');
+        if (!self::findResetToken($token)) {
+            Flash::add('error', 'リンクが無効か期限切れです。もう一度やり直してください。');
+            return redirect($response, '/forgot');
+        }
+        return View::render($response, 'reset', ['title' => '新しいパスワード', 'token' => $token]);
+    }
+
+    public function reset(Request $request, Response $response): Response
+    {
+        $token = (string)($_POST['token'] ?? '');
+        $row = self::findResetToken($token);
+        if (!$row) {
+            Flash::add('error', 'リンクが無効か期限切れです。もう一度やり直してください。');
+            return redirect($response, '/forgot');
+        }
+
+        $password = (string)($_POST['password'] ?? '');
+        if (mb_strlen($password) < 8) {
+            Flash::add('error', 'パスワードは8文字以上にしてください。');
+            return redirect($response, '/reset?token=' . urlencode($token));
+        }
+        if ($password !== (string)($_POST['password_confirm'] ?? '')) {
+            Flash::add('error', '確認用のパスワードが一致しません。');
+            return redirect($response, '/reset?token=' . urlencode($token));
+        }
+
+        Db::query('UPDATE email_tokens SET used_at = ? WHERE id = ?', [Db::now(), $row['id']]);
+        // 再設定できたということはメールを受け取れているので、未確認なら確認済みにする
+        Db::query(
+            "UPDATE users
+                SET password_hash = ?,
+                    status = IF(status = 'pending', 'active', status)
+              WHERE id = ?",
+            [password_hash($password, PASSWORD_DEFAULT), $row['user_id']]
+        );
+
+        $user = Db::query('SELECT * FROM users WHERE id = ?', [$row['user_id']])->fetch();
+        if ($user && $user['status'] === 'active') {
+            Auth::login($user);
+            Flash::add('success', 'パスワードを変更しました。');
+            return redirect($response, '/');
+        }
+        Flash::add('success', 'パスワードを変更しました。ログインしてください。');
+        return redirect($response, '/login');
+    }
+
+    private static function findResetToken(string $token): array|false
+    {
+        if ($token === '') {
+            return false;
+        }
+        return Db::query(
+            "SELECT * FROM email_tokens
+              WHERE token_hash = ? AND purpose = 'reset' AND used_at IS NULL AND expires_at > ?",
+            [hash('sha256', $token), Db::now()]
+        )->fetch();
+    }
+
     private function sendVerifyMail(int $userId, string $email): void
     {
         $token = bin2hex(random_bytes(32));
@@ -195,7 +303,9 @@ final class AuthController
             . "以下のURLを開いてメールアドレスの確認を完了してください(24時間有効):\n\n"
             . "{$url}\n\n"
             . "心当たりがない場合はこのメールを破棄してください。\n";
-        Mailer::send($email, "【{$site}】メールアドレスの確認", $body);
+        if (!Mailer::send($email, "【{$site}】メールアドレスの確認", $body)) {
+            Log::error('確認メールを送れませんでした', ['user_id' => $userId, 'email' => $email]);
+        }
     }
 
     // MXまたはAレコードがあるドメインのみ受け付ける(実在メールの最低限チェック)

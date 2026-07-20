@@ -36,6 +36,15 @@ $currentPath = '/ideas/' . (int)$idea['id'];
         </button>
       </form>
       <?php endif; ?>
+      <?php if (($isMyIdea || Auth::isAdmin()) && $idea['status'] !== 'hidden'): ?>
+      <form method="post" action="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/closed" class="inline-form">
+        <?= Csrf::field() ?>
+        <button type="submit" class="btn"
+                title="<?= $idea['status'] === 'closed' ? '返信の受付を再開します' : '新しい返信を受け付けなくします(閲覧はできます)' ?>">
+          <?= $idea['status'] === 'closed' ? '受付を再開' : '受付を終了' ?>
+        </button>
+      </form>
+      <?php endif; ?>
     </div>
   </div>
   <div class="idea-meta">
@@ -119,17 +128,33 @@ $currentPath = '/ideas/' . (int)$idea['id'];
     <span class="fold-hint">クリックで開閉</span>
   </summary>
   <?php foreach ($posts as $p): ?>
+    <?php if ($p['deleted_at'] !== null): ?>
+      <div class="post post-hidden" id="post-<?= (int)$p['id'] ?>"><p class="note">この返信は削除されました。</p></div>
+      <?php continue; ?>
+    <?php endif; ?>
     <?php if ($p['status'] === 'hidden' && !Auth::isAdmin()): ?>
       <div class="post post-hidden" id="post-<?= (int)$p['id'] ?>"><p class="note">この投稿は非表示になっています。</p></div>
       <?php continue; ?>
     <?php endif; ?>
+    <?php $isMyPost = $user && (int)$p['user_id'] === (int)$user['id']; ?>
     <div class="post <?= $p['status'] === 'hidden' ? 'is-hidden' : '' ?>" id="post-<?= (int)$p['id'] ?>">
       <div class="post-meta">
         <?= Avatar::html($p, 'md') ?>
         <strong><?= e($p['display_name']) ?></strong>
         <span><?= e(fmt_date($p['created_at'])) ?></span>
+        <?php if ($p['edited_at'] !== null): ?>
+          <span class="note" title="<?= e(fmt_date($p['edited_at'])) ?> に編集">(編集済み)</span>
+        <?php endif; ?>
         <?php if ($p['status'] === 'hidden'): ?><span class="badge badge-danger">非表示</span><?php endif; ?>
         <span class="post-actions">
+          <?php if ($isMyPost): ?>
+            <button type="button" class="link-btn" data-edit-post="<?= (int)$p['id'] ?>">編集</button>
+            <form method="post" action="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/posts/<?= (int)$p['id'] ?>/delete"
+                  class="inline-form" data-confirm="この返信を削除します。よろしいですか?">
+              <?= Csrf::field() ?>
+              <button type="submit" class="link-btn">削除</button>
+            </form>
+          <?php endif; ?>
           <?php if ($canPost): ?>
           <button type="button" class="link-btn" data-note-from-post="<?= (int)$p['id'] ?>"
                   data-note-body="<?= e(mb_substr($p['body'], 0, 500)) ?>"
@@ -158,6 +183,18 @@ $currentPath = '/ideas/' . (int)$idea['id'];
         </span>
       </div>
       <div class="md-body is-clampable"><?= Text::markdown($p['body']) ?></div>
+      <?php if ($isMyPost): ?>
+      <form method="post" action="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/posts/<?= (int)$p['id'] ?>/edit"
+            class="post-edit-form" id="edit-form-<?= (int)$p['id'] ?>" hidden>
+        <?= Csrf::field() ?>
+        <textarea name="body" rows="6" required maxlength="10000"
+                  aria-label="返信を編集"><?= e($p['body']) ?></textarea>
+        <div class="sticky-form-row">
+          <button type="submit" class="btn btn-primary">保存</button>
+          <button type="button" class="btn" data-cancel-edit="<?= (int)$p['id'] ?>">取消</button>
+        </div>
+      </form>
+      <?php endif; ?>
     </div>
   <?php endforeach; ?>
 

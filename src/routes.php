@@ -107,6 +107,10 @@ return function (App $app): void {
     $app->get('/login', [AuthController::class, 'showLogin']);
     $app->post('/login', [AuthController::class, 'login']);
     $app->post('/logout', [AuthController::class, 'logout']);
+    $app->get('/forgot', [AuthController::class, 'showForgot']);
+    $app->post('/forgot', [AuthController::class, 'forgot']);
+    $app->get('/reset', [AuthController::class, 'showReset']);
+    $app->post('/reset', [AuthController::class, 'reset']);
     $app->get('/resend', [AuthController::class, 'showResend']);
     $app->post('/resend', [AuthController::class, 'resend']);
 
@@ -114,8 +118,12 @@ return function (App $app): void {
     $app->get('/ideas/new', [IdeaController::class, 'showNew'])->add($requireActive);
     $app->post('/ideas', [IdeaController::class, 'create'])->add($requireActive);
     $app->post('/ideas/{id:[0-9]+}/reply', [IdeaController::class, 'reply'])->add($requireActive);
-    // 投稿者が自分のスレッドを下げる/戻す
+    // 投稿者が自分のスレッドを下げる/戻す・受付を終了/再開する
     $app->post('/ideas/{id:[0-9]+}/visibility', [IdeaController::class, 'toggleVisibility'])->add($requireActive);
+    $app->post('/ideas/{id:[0-9]+}/closed', [IdeaController::class, 'toggleClosed'])->add($requireActive);
+    // 返信の編集・削除 (書いた本人のみ)
+    $app->post('/ideas/{id:[0-9]+}/posts/{postId:[0-9]+}/edit', [IdeaController::class, 'editPost'])->add($requireActive);
+    $app->post('/ideas/{id:[0-9]+}/posts/{postId:[0-9]+}/delete', [IdeaController::class, 'deletePost'])->add($requireActive);
     $app->post('/report', [IdeaController::class, 'report'])->add($requireActive);
 
     // 表示の設定 (アバター・表示名)

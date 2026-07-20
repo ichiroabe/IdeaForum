@@ -67,6 +67,74 @@
     if (btn && btn.classList.contains('clamp-toggle')) btn.textContent = '続きを読む';
   }
 
+  // --- 4. 返信の編集切替と削除確認 ------------------------------------------
+  // ここでも confirm() は使わない。JSの実行を止めるうえ、自動操作や
+  // アプリ内ブラウザで扱えなくなるため(付箋ボードと同じ方針)。
+
+  document.querySelectorAll('[data-edit-post]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.editPost;
+      const form = document.getElementById('edit-form-' + id);
+      const post = btn.closest('.post');
+      const body = post.querySelector('.md-body');
+      const clampBtn = body.nextElementSibling;
+
+      form.hidden = false;
+      body.hidden = true;
+      if (clampBtn && clampBtn.classList.contains('clamp-toggle')) clampBtn.hidden = true;
+      form.querySelector('textarea').focus();
+    });
+  });
+
+  document.querySelectorAll('[data-cancel-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.cancelEdit;
+      const form = document.getElementById('edit-form-' + id);
+      const post = form.closest('.post');
+      const body = post.querySelector('.md-body');
+      const clampBtn = body.nextElementSibling;
+
+      form.hidden = true;
+      body.hidden = false;
+      if (clampBtn && clampBtn.classList.contains('clamp-toggle')) clampBtn.hidden = false;
+    });
+  });
+
+  // 削除は取り消せないので、その場に確認を出してから送信する
+  document.querySelectorAll('form[data-confirm]').forEach(form => {
+    const submit = form.querySelector('button[type="submit"]');
+    submit.addEventListener('click', ev => {
+      if (form.dataset.confirmed === 'yes') return;
+      ev.preventDefault();
+      if (form.querySelector('.inline-confirm')) return;
+
+      const box = document.createElement('span');
+      box.className = 'inline-confirm';
+      box.setAttribute('role', 'group');
+      box.setAttribute('aria-label', '削除の確認');
+      box.append(form.dataset.confirm + ' ');
+
+      const yes = document.createElement('button');
+      yes.type = 'button';
+      yes.className = 'link-btn is-danger';
+      yes.textContent = '削除する';
+      yes.addEventListener('click', () => {
+        form.dataset.confirmed = 'yes';
+        form.submit();
+      });
+
+      const no = document.createElement('button');
+      no.type = 'button';
+      no.className = 'link-btn';
+      no.textContent = 'やめる';
+      no.addEventListener('click', () => box.remove());
+
+      box.append(yes, document.createTextNode(' / '), no);
+      form.after(box);
+      yes.focus();
+    });
+  });
+
   document.querySelectorAll('.md-body.is-clampable').forEach(el => {
     if (el.scrollHeight <= CLAMP_HEIGHT) return;   // 短い返信はそのまま
 

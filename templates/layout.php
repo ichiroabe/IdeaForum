@@ -2,6 +2,7 @@
 use App\Support\App;
 use App\Support\Auth;
 use App\Support\Avatar;
+use App\Support\Unread;
 use App\Support\Csrf;
 use App\Support\Flash;
 
@@ -26,7 +27,14 @@ $siteName = (string)App::config('site_name', 'IdeaForum');
         <a class="btn btn-primary" href="<?= bp() ?>/ideas/new">+ アイディアを出す</a>
       <?php endif; ?>
       <?php if ($user): ?>
-        <?php if ($user['role'] === 'admin'): ?><a href="<?= bp() ?>/admin">管理</a><?php endif; ?>
+        <?php $newCount = Unread::count(); ?>
+        <?php if ($newCount > 0): ?>
+          <a href="<?= bp() ?>/" title="自分が関わったスレッドに更新があります">新着<span class="nav-count"><?= $newCount ?></span></a>
+        <?php endif; ?>
+        <?php if ($user['role'] === 'admin'): ?>
+          <?php $openReports = Unread::openReports(); ?>
+          <a href="<?= bp() ?>/admin">管理<?php if ($openReports > 0): ?><span class="nav-count"><?= $openReports ?></span><?php endif; ?></a>
+        <?php endif; ?>
         <a class="username" href="<?= bp() ?>/settings" title="表示の設定">
           <?= Avatar::html($user, 'sm') ?><?= e($user['display_name']) ?>
         </a>

@@ -10,6 +10,7 @@ use App\Support\Flash;
 use App\Support\IdeaAccess;
 use App\Support\RateLimiter;
 use App\Support\Text;
+use App\Support\Unread;
 use App\Support\View;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -40,10 +41,17 @@ final class IdeaController
             $params[] = $tag;
         }
         if ($search !== '') {
-            $where[] = '(i.title LIKE ? OR i.body LIKE ?)';
+            // 議論の中身は返信と付箋にあるので、そちらも探す。
+            // タイトルと本文だけだと「あったはずなのに見つからない」が起きる。
+            $where[] = '(i.title LIKE ? OR i.body LIKE ?
+                         OR EXISTS (SELECT 1 FROM posts p
+                                     WHERE p.idea_id = i.id AND p.deleted_at IS NULL
+                                       AND p.status = \'visible\' AND p.body LIKE ?)
+                         OR EXISTS (SELECT 1 FROM notes n
+                                     WHERE n.idea_id = i.id AND n.deleted_at IS NULL
+                                       AND n.body LIKE ?))';
             $like = '%' . addcslashes($search, '%_\\') . '%';
-            $params[] = $like;
-            $params[] = $like;
+            array_push($params, $like, $like, $like, $like);
         }
         // 管理者かつ絞り込み無しだと条件が1つも無くなるため、その場合に備える
         $whereSql = $where ? implode(' AND ', $where) : '1';
@@ -69,6 +77,7 @@ final class IdeaController
         return View::render($response, 'home', [
             'title'      => null,
             'ideas'      => $ideas,
+            'unreadIds'  => Unread::idsWithUpdates(array_map('intval', array_column($ideas, 'id'))),
             'tagsByIdea' => $tagsByIdea,
             'allTags'    => $allTags,
             'tag'        => $tag,
@@ -138,6 +147,9 @@ final class IdeaController
             [$idea['id']]
         )->fetchAll();
         $tags = self::tagsFor([(int)$idea['id']])[(int)$idea['id']] ?? [];
+
+        // 開いた時点で既読にする。以降の更新だけが「新着」として出る。
+        Unread::markRead((int)$idea['id']);
 
         return View::render($response, 'idea_show', [
             'title' => $idea['title'],
@@ -218,7 +230,8 @@ final class IdeaController
         $idea = self::findVisible((int)$args['id'], $request);
         $posts = Db::query(
             "SELECT p.*, u.display_name FROM posts p JOIN users u ON u.id = p.user_id
-             WHERE p.idea_id = ? AND p.status = 'visible' ORDER BY p.created_at",
+             WHERE p.idea_id = ? AND p.status = 'visible' AND p.deleted_at IS NULL
+             ORDER BY p.created_at",
             [$idea['id']]
         )->fetchAll();
         $tags = self::tagsFor([(int)$idea['id']])[(int)$idea['id']] ?? [];
@@ -286,6 +299,97 @@ final class IdeaController
         $s = str_replace(['"', '[', ']', '{', '}', '|', '<', '>'], ' ', $s);
         $s = trim(preg_replace('/\s+/u', ' ', $s) ?? '');
         return mb_strlen($s) > 60 ? mb_substr($s, 0, 60) . '…' : $s;
+    }
+
+    /** 返信の編集。書いた本人のみ。編集前の内容は残す。 */
+    public function editPost(Request $request, Response $response, array $args): Response
+    {
+        $idea = self::findVisible((int)$args['id'], $request);
+        $post = self::findPost((int)$args['postId'], (int)$idea['id'], $request);
+
+        if ((int)$post['user_id'] !== Auth::id() || $post['deleted_at'] !== null) {
+            Flash::add('error', 'この返信は編集できません。');
+            return redirect($response, '/ideas/' . $idea['id']);
+        }
+
+        $body = trim(str_replace("\r\n", "\n", (string)($_POST['body'] ?? '')));
+        if ($body === '' || mb_strlen($body) > 10000) {
+            Flash::add('error', '本文は1〜10000文字で入力してください。');
+            return redirect($response, '/ideas/' . $idea['id'] . '#post-' . $post['id']);
+        }
+        if ($body === $post['body']) {
+            return redirect($response, '/ideas/' . $idea['id'] . '#post-' . $post['id']);
+        }
+
+        self::recordPostEdit((int)$post['id'], 'edit', $post['body']);
+        Db::query('UPDATE posts SET body = ?, edited_at = ? WHERE id = ?', [$body, Db::now(), $post['id']]);
+
+        Flash::add('success', '返信を編集しました。');
+        return redirect($response, '/ideas/' . $idea['id'] . '#post-' . $post['id']);
+    }
+
+    /** 返信の削除。書いた本人のみ。論理削除なので内容は残る。 */
+    public function deletePost(Request $request, Response $response, array $args): Response
+    {
+        $idea = self::findVisible((int)$args['id'], $request);
+        $post = self::findPost((int)$args['postId'], (int)$idea['id'], $request);
+
+        if ((int)$post['user_id'] !== Auth::id() || $post['deleted_at'] !== null) {
+            Flash::add('error', 'この返信は削除できません。');
+            return redirect($response, '/ideas/' . $idea['id']);
+        }
+
+        self::recordPostEdit((int)$post['id'], 'delete', $post['body']);
+        Db::query(
+            'UPDATE posts SET deleted_at = ?, deleted_by = ? WHERE id = ?',
+            [Db::now(), Auth::id(), $post['id']]
+        );
+        Db::query(
+            'UPDATE ideas SET posts_count = (SELECT COUNT(*) FROM posts WHERE idea_id = ? AND deleted_at IS NULL) WHERE id = ?',
+            [$idea['id'], $idea['id']]
+        );
+
+        Flash::add('success', '返信を削除しました。');
+        return redirect($response, '/ideas/' . $idea['id']);
+    }
+
+    /** スレッドの受付終了 / 再開。起案者と管理者のみ。 */
+    public function toggleClosed(Request $request, Response $response, array $args): Response
+    {
+        $idea = self::findVisible((int)$args['id'], $request);
+
+        if (!Auth::isAdmin() && (int)$idea['user_id'] !== Auth::id()) {
+            Flash::add('error', 'このスレッドの状態は変更できません。');
+            return redirect($response, '/ideas/' . $idea['id']);
+        }
+        if ($idea['status'] === 'hidden') {
+            Flash::add('error', '非表示のスレッドは開閉できません。');
+            return redirect($response, '/ideas/' . $idea['id']);
+        }
+
+        $next = $idea['status'] === 'closed' ? 'open' : 'closed';
+        Db::query('UPDATE ideas SET status = ? WHERE id = ?', [$next, $idea['id']]);
+        Flash::add('success', $next === 'closed'
+            ? 'このスレッドの返信受付を終了しました。'
+            : '返信の受付を再開しました。');
+        return redirect($response, '/ideas/' . $idea['id']);
+    }
+
+    private static function findPost(int $postId, int $ideaId, Request $request): array
+    {
+        $post = Db::query('SELECT * FROM posts WHERE id = ? AND idea_id = ?', [$postId, $ideaId])->fetch();
+        if (!$post) {
+            throw new HttpNotFoundException($request);
+        }
+        return $post;
+    }
+
+    private static function recordPostEdit(int $postId, string $action, ?string $beforeBody): void
+    {
+        Db::query(
+            'INSERT INTO post_edits (post_id, editor_id, action, before_body, created_at) VALUES (?, ?, ?, ?, ?)',
+            [$postId, Auth::id(), $action, $beforeBody, Db::now()]
+        );
     }
 
     /** 投稿者が自分のスレッドを一覧から下げる / 戻す */

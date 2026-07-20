@@ -14,5 +14,6 @@ use App\Support\Csrf;
     <button type="submit" class="btn btn-primary btn-block">ログイン</button>
   </form>
   <p class="auth-alt">はじめての方は <a href="<?= bp() ?>/register">新規登録</a></p>
+  <p class="auth-alt"><a href="<?= bp() ?>/forgot">パスワードを忘れた場合</a></p>
   <p class="auth-alt"><a href="<?= bp() ?>/resend">確認メールが届かない場合(再送)</a></p>
 </div>

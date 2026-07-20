@@ -106,6 +106,13 @@ main.container { padding-top: 24px; padding-bottom: 48px; }
   background: var(--border); border-radius: 4px; padding: 0 6px; font-size: 0.78rem;
 }
 .badge-danger { background: var(--error-bg); color: var(--error-text); }
+.badge-new { background: var(--primary); color: #fff; font-weight: 700; }
+/* ヘッダーの件数バッジ (新着・未対応の通報) */
+.nav-count {
+  display: inline-block; min-width: 18px; padding: 0 5px;
+  background: var(--danger); color: #fff; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 700; text-align: center; margin-left: 3px;
+}
 
 .pagination { display: flex; justify-content: center; gap: 16px; margin-top: 20px; color: var(--muted); }
 
@@ -232,6 +239,16 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 }
 .clamp-toggle { margin-top: 4px; font-size: 0.85rem; }
 
+/* 返信の編集フォームとその場での削除確認 */
+.post-edit-form { margin-top: 10px; }
+.post-edit-form textarea { margin-bottom: 8px; }
+.inline-confirm {
+  display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-left: 8px; font-size: 0.85rem; color: var(--warn);
+}
+.link-btn.is-danger { color: var(--danger); font-weight: 700; }
+.post-hidden { opacity: 0.7; }
+
 /* アンカーで飛んできた投稿を一瞬目立たせる */
 .is-highlighted { animation: flash 2s ease-out; }
 @keyframes flash {
@@ -268,7 +285,11 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
   display: flex; flex-direction: column;
   overflow: hidden; word-break: break-word;
 }
-.can-edit .sticky { cursor: grab; }
+/* タッチ端末でドラッグがページスクロールに奪われないようにする。
+   これが無いと指で付箋を動かせず、画面ごとスクロールしてしまう。 */
+.can-edit .sticky { cursor: grab; touch-action: none; }
+/* 入力欄の中では通常のタッチ操作(選択・スクロール)に戻す */
+.sticky-form, .sticky-input, .sticky-reason, .confirm-pop, .palette { touch-action: auto; }
 .sticky.is-dragging { cursor: grabbing; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28); z-index: 10; }
 .sticky.is-link-source { outline: 3px solid var(--primary); outline-offset: 1px; }
 .sticky-body { flex: 1; white-space: pre-wrap; }

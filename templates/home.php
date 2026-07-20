@@ -30,6 +30,9 @@ use App\Support\Avatar;
   <li class="idea-card <?= $i['status'] === 'hidden' ? 'is-hidden' : '' ?>">
     <div class="idea-main">
       <a class="idea-title" href="<?= bp() ?>/ideas/<?= (int)$i['id'] ?>"><?= e($i['title']) ?></a>
+      <?php if (in_array((int)$i['id'], $unreadIds ?? [], true)): ?>
+        <span class="badge badge-new" title="前回開いてから更新があります">新着</span>
+      <?php endif; ?>
       <div class="idea-meta">
         <span class="avatar-with-name">
           <?= Avatar::html(['id' => $i['user_id'], 'display_name' => $i['display_name'],

@@ -16,7 +16,12 @@ final class Mailer
             $fromName = (string)App::config('mail.from_name', '');
             $encodedName = mb_encode_mimeheader($fromName, 'ISO-2022-JP');
             $headers = "From: {$encodedName} <{$from}>";
-            return mb_send_mail($to, $subject, $body, $headers);
+            $ok = mb_send_mail($to, $subject, $body, $headers);
+            if (!$ok) {
+                // 握りつぶすと「届かない理由が誰にも分からない」状態になる
+                Log::error('メール送信に失敗しました', ['to' => $to, 'subject' => $subject]);
+            }
+            return $ok;
         }
 
         // 開発用: ファイルに書き出す
