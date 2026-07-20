@@ -261,10 +261,154 @@ final class IdeaController
     }
 
     /**
+     * 「実装対象」の印が付いた付箋だけを、指示書の型でMarkdownにする。
+     *
+     * 通常のMD出力が議論の記録なのに対し、こちらは次の作業に渡すためのもの。
+     * 共有の場に置いた思考を手元へ帰す経路なので、判断の経緯(誰が何を
+     * なぜ変えたか)も一緒に持ち出せるようにしている。
+     */
+    public function exportSpec(Request $request, Response $response, array $args): Response
+    {
+        $idea = self::findVisible((int)$args['id'], $request);
+        $author = (string)Db::query('SELECT display_name FROM users WHERE id = ?', [$idea['user_id']])->fetchColumn();
+        $tags = self::tagsFor([(int)$idea['id']])[(int)$idea['id']] ?? [];
+
+        $targets = Db::query(
+            "SELECT n.id, n.body, n.color, u.display_name
+             FROM notes n JOIN users u ON u.id = n.user_id
+             WHERE n.idea_id = ? AND n.is_target = 1 AND n.deleted_at IS NULL
+             ORDER BY n.id",
+            [$idea['id']]
+        )->fetchAll();
+
+        $md  = '# ' . $idea['title'] . "\n\n";
+        // 本文にも見出しがあるため、1段下げて指示書の構成に収める
+        $md .= "## 背景\n\n" . self::demoteHeadings($idea['body'], 2) . "\n\n";
+
+        $md .= "## 対象\n\n";
+        if (!$targets) {
+            $md .= "実装対象の付箋が選ばれていません。ボードで付箋に「的」印を付けてください。\n\n";
+        } else {
+            foreach ($targets as $t) {
+                $label = NoteController::COLORS[$t['color']] ?? $t['color'];
+                $md .= '### ' . self::firstLine($t['body']) . " ({$label})\n\n";
+                // 1行目は見出しにしたので、残りだけを本文として出す
+                $rest = trim(self::withoutFirstLine($t['body']));
+                if ($rest !== '') {
+                    $md .= $rest . "\n\n";
+                }
+
+                $events = Db::query(
+                    "SELECT e.action, e.reason, e.before_body, e.before_color, e.after_color,
+                            e.created_at, u.display_name
+                     FROM note_events e JOIN users u ON u.id = e.actor_id
+                     WHERE e.note_id = ? AND e.reason IS NOT NULL ORDER BY e.id",
+                    [$t['id']]
+                )->fetchAll();
+                if ($events) {
+                    // 理由が付いた変更だけを載せる。「なぜそうなったか」が
+                    // 抜けると、受け取った側が判断を再現できない。
+                    $md .= "検討の経緯:\n\n";
+                    foreach ($events as $ev) {
+                        $what = match ($ev['action']) {
+                            'edit'   => '文面を変更',
+                            'color'  => '分類を変更 (' . ($ev['before_color'] ?? '') . ' → ' . ($ev['after_color'] ?? '') . ')',
+                            'delete' => '削除',
+                            default  => $ev['action'],
+                        };
+                        $md .= '- ' . $ev['created_at'] . ' ' . $ev['display_name'] . ' が' . $what
+                             . ' — ' . $ev['reason'] . "\n";
+                    }
+                    $md .= "\n";
+                }
+            }
+        }
+
+        $board = self::boardMarkdown((int)$idea['id'], false);
+        $md .= "## 関係\n\n" . ($board !== '' ? $board : "(付箋がありません)\n");
+
+        $md .= "\n## 受け入れの目安\n\n";
+        $md .= "- 上記「対象」の各項目が満たされていること\n";
+        $md .= "- 既存の動作を壊していないこと\n\n";
+
+        $md .= "## 出典\n\n";
+        $md .= '- スレッド: ' . App::baseUrl('/ideas/' . $idea['id']) . "\n";
+        $md .= '- 起案: ' . $author . ' (' . $idea['created_at'] . ")\n";
+        if ($tags) {
+            $md .= '- タグ: ' . implode(' ', array_map(fn($t) => '#' . $t, $tags)) . "\n";
+        }
+        if (!empty($idea['impl_url'])) {
+            $md .= '- 実装: ' . $idea['impl_url'] . "\n";
+        }
+
+        $name = 'spec-' . $idea['id'] . '-' . preg_replace('/[^\w\-]+/u', '_', mb_substr($idea['title'], 0, 24)) . '.md';
+        $response->getBody()->write($md);
+        return $response
+            ->withHeader('Content-Type', 'text/markdown; charset=utf-8')
+            ->withHeader('Content-Disposition', 'attachment; filename*=UTF-8\'\'' . rawurlencode($name));
+    }
+
+    /** 実装結果の記録 (起案者と管理者のみ) */
+    public function saveImpl(Request $request, Response $response, array $args): Response
+    {
+        $idea = self::findVisible((int)$args['id'], $request);
+        if (!Auth::isAdmin() && (int)$idea['user_id'] !== Auth::id()) {
+            Flash::add('error', 'この記録は変更できません。');
+            return redirect($response, '/ideas/' . $idea['id']);
+        }
+        $url = trim((string)($_POST['impl_url'] ?? ''));
+        $note = mb_substr(trim((string)($_POST['impl_note'] ?? '')), 0, 300);
+        if ($url !== '' && !filter_var($url, FILTER_VALIDATE_URL)) {
+            Flash::add('error', 'URLの形式が正しくありません。');
+            return redirect($response, '/ideas/' . $idea['id']);
+        }
+        Db::query(
+            'UPDATE ideas SET impl_url = ?, impl_note = ? WHERE id = ?',
+            [$url !== '' ? mb_substr($url, 0, 500) : null, $note !== '' ? $note : null, $idea['id']]
+        );
+        Flash::add('success', '実装の記録を保存しました。');
+        return redirect($response, '/ideas/' . $idea['id']);
+    }
+
+    private static function firstLine(string $s): string
+    {
+        $line = trim(strtok(str_replace("\r\n", "\n", $s), "\n") ?: '');
+        return mb_strlen($line) > 60 ? mb_substr($line, 0, 60) . '…' : ($line !== '' ? $line : '(無題)');
+    }
+
+    private static function withoutFirstLine(string $s): string
+    {
+        $parts = explode("\n", str_replace("\r\n", "\n", $s), 2);
+        return $parts[1] ?? '';
+    }
+
+    /**
+     * 取り込んだ本文の見出しを $by 段だけ下げる。
+     * 利用者が書いた「## 背景」がそのまま入ると、指示書側の見出しと
+     * 同じ高さになって構成が崩れるため。
+     */
+    private static function demoteHeadings(string $md, int $by): string
+    {
+        $lines = explode("\n", str_replace("\r\n", "\n", $md));
+        $inFence = false;
+        foreach ($lines as $i => $line) {
+            if (preg_match('/^\s*(```|~~~)/', $line)) {
+                $inFence = !$inFence;   // コード内の # は見出しではない
+                continue;
+            }
+            if (!$inFence && preg_match('/^(#{1,6})(\s)/', $line, $m)) {
+                $level = min(6, strlen($m[1]) + $by);
+                $lines[$i] = str_repeat('#', $level) . substr($line, strlen($m[1]));
+            }
+        }
+        return implode("\n", $lines);
+    }
+
+    /**
      * 付箋ボードを mermaid の図として書き出す。
      * openManidoc 側でノードの関係をそのまま図として取り込めるようにするため。
      */
-    private static function boardMarkdown(int $ideaId): string
+    private static function boardMarkdown(int $ideaId, bool $withHeading = true): string
     {
         $notes = Db::query(
             'SELECT id, body, color FROM notes WHERE idea_id = ? ORDER BY id',
@@ -278,7 +422,7 @@ final class IdeaController
             [$ideaId]
         )->fetchAll();
 
-        $md = "\n## 付箋ボード\n\n```mermaid\ngraph TD\n";
+        $md = ($withHeading ? "\n## 付箋ボード\n\n" : '') . "```mermaid\ngraph TD\n";
         foreach ($notes as $n) {
             $md .= sprintf("    N%d[\"%s\"]\n", $n['id'], self::mermaidText($n['body']));
         }

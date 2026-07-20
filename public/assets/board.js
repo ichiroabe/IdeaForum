@@ -230,7 +230,8 @@
   }
 
   function buildNote(n) {
-    const node = el('div', 'sticky sticky-' + n.color + (n.deleted ? ' is-deleted' : ''));
+    const node = el('div', 'sticky sticky-' + n.color
+      + (n.deleted ? ' is-deleted' : '') + (n.target ? ' is-target' : ''));
     node.dataset.id = n.id;
     node.style.left = n.x + 'px';
     node.style.top = n.y + 'px';
@@ -256,6 +257,9 @@
       tools.appendChild(h);
     }
     if (canEdit && !n.deleted) {
+      const target = button('的', n.target ? 'is-on' : '', () => toggleTarget(n));
+      target.title = n.target ? '実装対象から外す' : '実装対象にする (指示書に載ります)';
+      tools.appendChild(target);
       const link = button('連', '', () => startLink(n.id));
       link.title = 'ここから線をつなぐ';
       const edit = button('編', '', () => editNote(n, node));
@@ -498,6 +502,21 @@
     node.appendChild(box);
     openForm = { node: box, onClose: () => { if (anchorBtn) anchorBtn.focus(); } };
     (reason || box.querySelector('.palette-swatch')).focus();
+  }
+
+  // 実装対象の印。内容を変えるわけではないので理由も履歴も求めない。
+  async function toggleTarget(n) {
+    try {
+      await call('/notes/' + n.id, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_target: !n.target })
+      });
+      n.target = !n.target;
+      render();
+      say(n.target ? '実装対象にしました。' : '実装対象から外しました。');
+    } catch (e) {
+      say(e.message, true);
+    }
   }
 
   async function setColor(n, color, reason, showError) {

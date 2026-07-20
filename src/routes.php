@@ -89,6 +89,8 @@ return function (App $app): void {
     $app->get('/', [IdeaController::class, 'index']);
     $app->get('/ideas/{id:[0-9]+}', [IdeaController::class, 'show']);
     $app->get('/ideas/{id:[0-9]+}/export.md', [IdeaController::class, 'export']);
+    // 「実装対象」の付箋だけを指示書の型で書き出す
+    $app->get('/ideas/{id:[0-9]+}/spec.md', [IdeaController::class, 'exportSpec']);
 
     // 付箋ボード。閲覧は誰でも、編集はメール確認済みのメンバー。
     $app->get('/ideas/{id:[0-9]+}/notes', [NoteController::class, 'index']);
@@ -121,6 +123,7 @@ return function (App $app): void {
     // 投稿者が自分のスレッドを下げる/戻す・受付を終了/再開する
     $app->post('/ideas/{id:[0-9]+}/visibility', [IdeaController::class, 'toggleVisibility'])->add($requireActive);
     $app->post('/ideas/{id:[0-9]+}/closed', [IdeaController::class, 'toggleClosed'])->add($requireActive);
+    $app->post('/ideas/{id:[0-9]+}/impl', [IdeaController::class, 'saveImpl'])->add($requireActive);
     // 返信の編集・削除 (書いた本人のみ)
     $app->post('/ideas/{id:[0-9]+}/posts/{postId:[0-9]+}/edit', [IdeaController::class, 'editPost'])->add($requireActive);
     $app->post('/ideas/{id:[0-9]+}/posts/{postId:[0-9]+}/delete', [IdeaController::class, 'deletePost'])->add($requireActive);

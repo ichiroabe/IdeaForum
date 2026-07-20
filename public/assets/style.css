@@ -321,6 +321,19 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 .sticky-tools .has-history { background: rgba(37, 99, 235, 0.14); font-weight: 700; }
 
 .sticky.is-deleted { opacity: 0.45; filter: grayscale(0.6); }
+/* 実装対象の印。指示書に載る付箋が一目で分かるようにする */
+.sticky.is-target { box-shadow: 0 0 0 3px var(--primary), 0 2px 6px rgba(0, 0, 0, 0.18); }
+.sticky-tools button.is-on { background: var(--primary); color: #fff; font-weight: 700; }
+
+/* 実装結果の記録 */
+.impl-record {
+  background: var(--success-bg); color: var(--success-text);
+  border-radius: var(--radius); padding: 8px 12px; font-size: 0.88rem;
+  margin-top: 12px; word-break: break-all;
+}
+.impl-form { margin-top: 12px; font-size: 0.88rem; }
+.impl-form summary { cursor: pointer; color: var(--muted); }
+.impl-form form { margin-top: 8px; }
 
 /* 色の意味を示す凡例 */
 .board-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0 4px; font-size: 0.82rem; color: var(--muted); }

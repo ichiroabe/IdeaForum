@@ -40,7 +40,7 @@ final class NoteController
         $showDeleted = Auth::isAdmin();
 
         $notes = Db::query(
-            "SELECT n.id, n.body, n.pos_x, n.pos_y, n.color, n.source_post_id,
+            "SELECT n.id, n.body, n.pos_x, n.pos_y, n.color, n.is_target, n.source_post_id,
                     n.user_id, n.deleted_at, u.display_name, u.avatar_emoji, u.avatar_color,
                     (SELECT COUNT(*) FROM note_events e WHERE e.note_id = n.id) AS event_count
              FROM notes n JOIN users u ON u.id = n.user_id
@@ -153,7 +153,7 @@ final class NoteController
         self::record((int)$idea['id'], $id, $userId, 'create', null, ['after_body' => $body, 'after_color' => $color]);
 
         $note = Db::query(
-            "SELECT n.id, n.body, n.pos_x, n.pos_y, n.color, n.source_post_id, n.user_id, n.deleted_at,
+            "SELECT n.id, n.body, n.pos_x, n.pos_y, n.color, n.is_target, n.source_post_id, n.user_id, n.deleted_at,
                     u.display_name, u.avatar_emoji, u.avatar_color, 1 AS event_count
              FROM notes n JOIN users u ON u.id = n.user_id WHERE n.id = ?",
             [$id]
@@ -189,6 +189,12 @@ final class NoteController
         $params = [];
         if (array_key_exists('pos_x', $data)) { $fields[] = 'pos_x = ?'; $params[] = self::clampPos($data['pos_x']); }
         if (array_key_exists('pos_y', $data)) { $fields[] = 'pos_y = ?'; $params[] = self::clampPos($data['pos_y']); }
+        // 実装対象の印。誰でも付け外しでき、理由も履歴も求めない
+        // (内容を変えるわけではなく、絞り込みの目印にすぎないため)。
+        if (array_key_exists('is_target', $data)) {
+            $fields[] = 'is_target = ?';
+            $params[] = !empty($data['is_target']) ? 1 : 0;
+        }
 
         $newColor = null;
         if (array_key_exists('color', $data)) {
@@ -386,6 +392,7 @@ final class NoteController
             'x'       => (int)$n['pos_x'],
             'y'       => (int)$n['pos_y'],
             'color'   => $n['color'],
+            'target'  => (bool)($n['is_target'] ?? false),
             'author'  => $n['display_name'],
             'userId'  => (int)$n['user_id'],
             // 付箋に作成者のアバターを出すため、色と絵柄も一緒に返す

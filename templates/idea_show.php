@@ -15,7 +15,8 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   <div class="idea-detail-head">
     <h1><?= e($idea['title']) ?></h1>
     <div class="idea-actions">
-      <a class="btn" href="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/export.md" title="openManidocに取り込めるMarkdownをダウンロード">MD出力</a>
+      <a class="btn" href="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/export.md" title="議論の記録をopenManidoc取り込み用Markdownで">MD出力</a>
+      <a class="btn" href="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/spec.md" title="「的」印を付けた付箋だけを、指示書の型で書き出します">指示書</a>
       <?php if (Auth::isAdmin()): ?>
       <form method="post" action="<?= bp() ?>/admin/toggle-visibility" class="inline-form">
         <?= Csrf::field() ?>
@@ -75,6 +76,35 @@ $currentPath = '/ideas/' . (int)$idea['id'];
   </div>
   <?php endif; ?>
   <div class="md-body"><?= Text::markdown($idea['body']) ?></div>
+
+  <?php if (!empty($idea['impl_url']) || !empty($idea['impl_note'])): ?>
+    <p class="impl-record">
+      <strong>実装:</strong>
+      <?php if (!empty($idea['impl_url'])): ?>
+        <a href="<?= e($idea['impl_url']) ?>" rel="noopener noreferrer" target="_blank"><?= e($idea['impl_url']) ?></a>
+      <?php endif; ?>
+      <?php if (!empty($idea['impl_note'])): ?><span><?= e($idea['impl_note']) ?></span><?php endif; ?>
+    </p>
+  <?php endif; ?>
+
+  <?php if ($isMyIdea || Auth::isAdmin()): ?>
+    <details class="impl-form">
+      <summary>実装結果を記録する</summary>
+      <p class="note">この発想が何になったかを残します。指示書にも出典として載ります。</p>
+      <form method="post" action="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/impl">
+        <?= Csrf::field() ?>
+        <label>コミットやPRのURL
+          <input type="url" name="impl_url" maxlength="500" placeholder="https://github.com/..."
+                 value="<?= e($idea['impl_url'] ?? '') ?>">
+        </label>
+        <label>ひとこと (任意)
+          <input type="text" name="impl_note" maxlength="300"
+                 value="<?= e($idea['impl_note'] ?? '') ?>">
+        </label>
+        <button type="submit" class="btn btn-primary">保存</button>
+      </form>
+    </details>
+  <?php endif; ?>
   <?php if ($canPost): ?>
   <details class="report-box">
     <summary>このアイディアを通報</summary>
