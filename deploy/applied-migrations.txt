@@ -10,3 +10,4 @@ schema.sql
 002-notes.sql
 003-note-history.sql
 004-avatars.sql
+005-hidden-by.sql

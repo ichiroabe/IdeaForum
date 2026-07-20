@@ -61,4 +61,29 @@ use App\Support\Csrf;
   </form>
 </div>
 
+<div class="form-page my-ideas">
+  <h2>自分が立ち上げたアイディア (<?= count($myIdeas) ?>)</h2>
+  <?php if (!$myIdeas): ?>
+    <p class="note">まだありません。<a href="<?= bp() ?>/ideas/new">最初のアイディアを出す</a></p>
+  <?php else: ?>
+    <ul class="my-idea-list">
+      <?php foreach ($myIdeas as $mi): ?>
+        <li class="<?= $mi['status'] === 'hidden' ? 'is-hidden' : '' ?>">
+          <a href="<?= bp() ?>/ideas/<?= (int)$mi['id'] ?>"><?= e($mi['title']) ?></a>
+          <span class="my-idea-meta">
+            返信 <?= (int)$mi['posts_count'] ?>
+            ・<?= e(fmt_date($mi['updated_at'])) ?>
+            <?php if ($mi['status'] === 'closed'): ?><span class="badge">終了</span><?php endif; ?>
+            <?php if ($mi['status'] === 'hidden'): ?>
+              <span class="badge badge-danger">
+                <?= ($mi['hidden_by'] ?? 'admin') === 'author' ? '一覧から非表示' : '管理者が非表示' ?>
+              </span>
+            <?php endif; ?>
+          </span>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  <?php endif; ?>
+</div>
+
 <script src="<?= bp() ?>/assets/settings.js" defer></script>

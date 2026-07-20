@@ -2,10 +2,13 @@
 use App\Support\Auth;
 use App\Support\Avatar;
 use App\Support\Csrf;
+use App\Support\IdeaAccess;
 use App\Support\Text;
 
 $user = Auth::user();
 $canPost = $user && $user['status'] === 'active';
+$canToggle = IdeaAccess::canToggleVisibility($idea);
+$isMyIdea = $user && (int)$idea['user_id'] === (int)$user['id'];
 $currentPath = '/ideas/' . (int)$idea['id'];
 ?>
 <article class="idea-detail">
@@ -19,7 +22,18 @@ $currentPath = '/ideas/' . (int)$idea['id'];
         <input type="hidden" name="target_type" value="idea">
         <input type="hidden" name="target_id" value="<?= (int)$idea['id'] ?>">
         <input type="hidden" name="back" value="<?= e($currentPath) ?>">
-        <button type="submit" class="btn btn-warn"><?= $idea['status'] === 'hidden' ? '再表示' : '非表示' ?></button>
+        <button type="submit" class="btn btn-warn"
+                title="管理者として非表示にします。参加者にも見えなくなります。">
+          <?= $idea['status'] === 'hidden' ? '再表示(管理)' : '非表示(管理)' ?>
+        </button>
+      </form>
+      <?php elseif ($isMyIdea && $canToggle): ?>
+      <form method="post" action="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/visibility" class="inline-form">
+        <?= Csrf::field() ?>
+        <button type="submit" class="btn"
+                title="一覧から下げます。参加した人はこれまでどおり読み書きできます。">
+          <?= $idea['status'] === 'hidden' ? '一覧に戻す' : '一覧から下げる' ?>
+        </button>
       </form>
       <?php endif; ?>
     </div>
@@ -35,8 +49,15 @@ $currentPath = '/ideas/' . (int)$idea['id'];
     </span>
     <span><?= e(fmt_date($idea['created_at'])) ?></span>
     <?php if ($idea['status'] === 'closed'): ?><span class="badge">終了</span><?php endif; ?>
-    <?php if ($idea['status'] === 'hidden'): ?><span class="badge badge-danger">非表示</span><?php endif; ?>
+    <?php if ($idea['status'] === 'hidden'): ?>
+      <span class="badge badge-danger">
+        <?= ($idea['hidden_by'] ?? 'admin') === 'author' ? '一覧から非表示' : '管理者が非表示' ?>
+      </span>
+    <?php endif; ?>
   </div>
+  <?php if ($idea['status'] === 'hidden' && ($idea['hidden_by'] ?? 'admin') === 'author'): ?>
+    <p class="note">このスレッドは一覧に出ていません。起案者と、返信したことがある人だけが読み書きできます。</p>
+  <?php endif; ?>
   <?php if ($tags): ?>
   <div class="idea-tags">
     <?php foreach ($tags as $tn): ?>
@@ -140,7 +161,9 @@ $currentPath = '/ideas/' . (int)$idea['id'];
     </div>
   <?php endforeach; ?>
 
-  <?php if ($canPost && $idea['status'] === 'open'): ?>
+  <?php /* 判定は IdeaAccess に一本化する。ここで status を直接見ると
+           一覧から下げたスレッドで参加者に返信欄が出なくなる。 */ ?>
+  <?php if (IdeaAccess::canReply($idea)): ?>
   <div class="reply-form">
     <h3>返信する</h3>
     <form method="post" action="<?= bp() ?>/ideas/<?= (int)$idea['id'] ?>/reply">

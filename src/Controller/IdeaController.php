@@ -7,6 +7,7 @@ use App\Support\App;
 use App\Support\Auth;
 use App\Support\Db;
 use App\Support\Flash;
+use App\Support\IdeaAccess;
 use App\Support\RateLimiter;
 use App\Support\Text;
 use App\Support\View;
@@ -26,13 +27,14 @@ final class IdeaController
         $page = max(1, (int)($q['page'] ?? 1));
         $offset = ($page - 1) * self::PER_PAGE;
 
-        // 管理者には非表示のものも出す。出さないと、非表示にした本人が
-        // 一覧からそれを辿れなくなり、戻す手立てが無くなるため。
+        // 誰に何が見えるかは IdeaAccess に集約している
         $where = [];
-        if (!Auth::isAdmin()) {
-            $where[] = "i.status <> 'hidden'";
-        }
         $params = [];
+        [$visCond, $visParams] = IdeaAccess::listCondition();
+        if ($visCond !== null) {
+            $where[] = $visCond;
+            $params = array_merge($params, $visParams);
+        }
         if ($tag !== '') {
             $where[] = 'EXISTS (SELECT 1 FROM idea_tags it JOIN tags t ON t.id = it.tag_id WHERE it.idea_id = i.id AND t.name = ?)';
             $params[] = $tag;
@@ -286,10 +288,32 @@ final class IdeaController
         return mb_strlen($s) > 60 ? mb_substr($s, 0, 60) . '…' : $s;
     }
 
+    /** 投稿者が自分のスレッドを一覧から下げる / 戻す */
+    public function toggleVisibility(Request $request, Response $response, array $args): Response
+    {
+        $idea = self::findVisible((int)$args['id'], $request);
+
+        if (!IdeaAccess::canToggleVisibility($idea)) {
+            Flash::add('error', $idea['status'] === 'hidden'
+                ? '管理者が非表示にしたスレッドは、投稿者からは戻せません。'
+                : 'このスレッドの表示状態は変更できません。');
+            return redirect($response, '/ideas/' . $idea['id']);
+        }
+
+        if ($idea['status'] === 'hidden') {
+            Db::query("UPDATE ideas SET status = 'open', hidden_by = NULL WHERE id = ?", [$idea['id']]);
+            Flash::add('success', 'スレッドを一覧に戻しました。');
+        } else {
+            Db::query("UPDATE ideas SET status = 'hidden', hidden_by = 'author' WHERE id = ?", [$idea['id']]);
+            Flash::add('success', '一覧から下げました。参加した人はこれまでどおり読み書きできます。');
+        }
+        return redirect($response, '/ideas/' . $idea['id']);
+    }
+
     private static function findVisible(int $id, Request $request): array
     {
         $idea = Db::query('SELECT * FROM ideas WHERE id = ?', [$id])->fetch();
-        if (!$idea || ($idea['status'] === 'hidden' && !Auth::isAdmin())) {
+        if (!$idea || !IdeaAccess::canView($idea)) {
             throw new HttpNotFoundException($request);
         }
         return $idea;

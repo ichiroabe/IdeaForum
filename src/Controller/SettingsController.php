@@ -15,9 +15,17 @@ final class SettingsController
 {
     public function show(Request $request, Response $response): Response
     {
+        // 自分が立ち上げたスレッド。一覧から下げたものも自分には見える。
+        $myIdeas = Db::query(
+            "SELECT id, title, status, hidden_by, posts_count, updated_at
+             FROM ideas WHERE user_id = ? ORDER BY updated_at DESC LIMIT 100",
+            [Auth::id()]
+        )->fetchAll();
+
         return View::render($response, 'settings', [
-            'title' => '表示の設定',
-            'user'  => Auth::user(),
+            'title'   => '表示の設定',
+            'user'    => Auth::user(),
+            'myIdeas' => $myIdeas,
         ]);
     }
 

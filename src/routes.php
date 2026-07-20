@@ -114,6 +114,8 @@ return function (App $app): void {
     $app->get('/ideas/new', [IdeaController::class, 'showNew'])->add($requireActive);
     $app->post('/ideas', [IdeaController::class, 'create'])->add($requireActive);
     $app->post('/ideas/{id:[0-9]+}/reply', [IdeaController::class, 'reply'])->add($requireActive);
+    // 投稿者が自分のスレッドを下げる/戻す
+    $app->post('/ideas/{id:[0-9]+}/visibility', [IdeaController::class, 'toggleVisibility'])->add($requireActive);
     $app->post('/report', [IdeaController::class, 'report'])->add($requireActive);
 
     // 表示の設定 (アバター・表示名)

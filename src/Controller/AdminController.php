@@ -50,7 +50,15 @@ final class AdminController
         $type = (string)($_POST['target_type'] ?? '');
         $id = (int)($_POST['target_id'] ?? 0);
         if ($type === 'idea') {
-            Db::query("UPDATE ideas SET status = IF(status = 'hidden', 'open', 'hidden') WHERE id = ?", [$id]);
+            // 管理者が下げたものは hidden_by='admin' として記録する。
+            // 投稿者が下げた場合と区別し、参加者にも見せないため。
+            Db::query(
+                "UPDATE ideas
+                    SET status    = IF(status = 'hidden', 'open', 'hidden'),
+                        hidden_by = IF(status = 'hidden', NULL, 'admin')
+                  WHERE id = ?",
+                [$id]
+            );
         } elseif ($type === 'post') {
             Db::query("UPDATE posts SET status = IF(status = 'hidden', 'visible', 'hidden') WHERE id = ?", [$id]);
         }

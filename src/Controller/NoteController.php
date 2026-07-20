@@ -6,6 +6,7 @@ namespace App\Controller;
 use App\Support\Auth;
 use App\Support\Avatar;
 use App\Support\Db;
+use App\Support\IdeaAccess;
 use App\Support\RateLimiter;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -362,7 +363,7 @@ final class NoteController
     private static function findIdea(int $id, Request $request): array
     {
         $idea = Db::query('SELECT * FROM ideas WHERE id = ?', [$id])->fetch();
-        if (!$idea || ($idea['status'] === 'hidden' && !Auth::isAdmin())) {
+        if (!$idea || !IdeaAccess::canView($idea)) {
             throw new HttpNotFoundException($request);
         }
         return $idea;
